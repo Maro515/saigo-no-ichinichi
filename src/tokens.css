@@ -1,0 +1,62 @@
+/* Hallmark · genre: atmospheric · structure: bespoke（全画面の 3D に文字を重ねる） · nav: none · footer: none
+ * theme: custom（vibe: "枕元の灯、墨、和紙、静けさ" · paper oklch(13% 0.012 65) · accent oklch(80% 0.11 75) 灯の琥珀
+ *   · Hiragino Mincho ProN + Hiragino Sans）
+ * axes: dark / classical-serif（明朝・縦組み） / warm · enrichment: 3D 空間そのもの
+ * pre-emit critique: P5 H4 E4 S5 R5 V5
+ */
+:root {
+  --color-paper: oklch(13% 0.012 65);
+  --color-paper-2: oklch(18% 0.014 65);
+  --color-paper-3: oklch(24% 0.014 65);
+  --color-rule: oklch(36% 0.012 70);
+  --color-neutral: oklch(64% 0.012 75);
+  --color-muted: oklch(78% 0.012 80);
+  --color-ink: oklch(94% 0.010 85);
+  --color-accent: oklch(80% 0.11 75);
+  --color-accent-dim: oklch(62% 0.08 75);
+  --color-focus: oklch(86% 0.13 80);
+  --color-lid: oklch(7% 0.012 40);
+  --color-shadow: oklch(9% 0.012 60);
+  --color-scrim: oklch(10% 0.012 65 / 0.72);
+  --color-scrim-0: oklch(10% 0.012 65 / 0);
+  --color-veil: oklch(10% 0.012 65 / 0.46);
+  --color-wash-white: oklch(97% 0.008 85);
+  --color-wash-dark: oklch(7% 0.012 40);
+  --color-wash-blue: oklch(30% 0.05 235);
+  --color-wash-gray: oklch(62% 0.006 80);
+  --color-wash-warm: oklch(86% 0.05 75);
+
+  --font-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Songti SC", serif;
+  --font-body: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "YuGothic", "Noto Sans JP", "Meiryo", sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-narr: clamp(1.0625rem, 0.92rem + 0.55vw, 1.375rem);
+  --text-mem: clamp(1.125rem, 0.98rem + 0.7vw, 1.5625rem);
+  --text-display: clamp(2.75rem, 5.2vw + 1.2rem, 5.5rem);
+
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+  --dur-text: 900ms;
+  --dur-scene: 1600ms;
+
+  --radius-sm: 2px;
+  --rule-hair: 1px;
+}
