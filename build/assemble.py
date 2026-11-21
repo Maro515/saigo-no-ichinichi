@@ -7,7 +7,7 @@ src/index.template.html に、次を埋め込んで index.html を書き出す�
   - src/tokens.css と src/style.css
   - vendor/three.bundle.min.js
   - src/js/*.js（名前の順につなぐ）
-  - data/causes/*.json（最期のパターン）と data/life/*.json（人生の記憶）
+  - data/causes/*.json（最期のパターン）と data/life/*.json（人生の記憶、会話、一日の出来事）
   - assets/kit.glb（Blender で作った人物と木。blender/build_assets.py が書き出す）
 """
 import base64, glob, json, os, sys
@@ -35,7 +35,11 @@ def main():
     last = json.load(open(last_path, encoding='utf-8')) if os.path.exists(last_path) else []
     end_path = os.path.join(ROOT, 'data', 'life', 'ending.json')
     ending = json.load(open(end_path, encoding='utf-8')) if os.path.exists(end_path) else {'sense': {}, 'voice': {}, 'after': {}}
-    data = json.dumps({'causes': causes, 'memories': memories, 'last': last, 'ending': ending}, ensure_ascii=False, separators=(',', ':'))
+    extra = {}
+    for name in ('talk', 'day'):
+        q = os.path.join(ROOT, 'data', 'life', name + '.json')
+        extra[name] = json.load(open(q, encoding='utf-8')) if os.path.exists(q) else {}
+    data = json.dumps({'causes': causes, 'memories': memories, 'last': last, 'ending': ending, 'talk': extra['talk'], 'day': extra['day']}, ensure_ascii=False, separators=(',', ':'))
     data = data.replace('</', '<\\/')
 
     glb = os.path.join(ROOT, 'assets', 'kit.glb')

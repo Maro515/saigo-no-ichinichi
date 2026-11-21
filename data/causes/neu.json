@@ -885,6 +885,7 @@
   "season": "autumn",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "06:30",
@@ -1104,6 +1105,7 @@
   "season": "autumn",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "07:00",
@@ -1159,6 +1161,7 @@
   "season": "winter",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "08:00",
@@ -1270,6 +1273,7 @@
   "season": "summer",
   "weather": "clear",
   "aware": false,
+  "bound": true,
   "beats": [
    {
     "t": "08:00",
@@ -1282,13 +1286,15 @@
     "stage": "bedroom",
     "pos": "lie",
     "with": true,
-    "text": "{大切な人}が、凍らせたスポーツ飲料を砕いて、口に入れてくれる。冷たい。飲みこもうとするが、のどが動かない。汗でねまきが背中にはりつく。"
+    "text": "{大切な人}が、凍らせたスポーツ飲料を砕いて、口に入れてくれる。冷たい。飲みこもうとするが、のどが動かない。汗でねまきが背中にはりつく。",
+    "bound": true
    },
    {
     "t": "15:30",
     "stage": "bedroom",
     "pos": "lie",
-    "text": "体が熱い。わきに体温計がはさまれて、四十度一分、という声がする。手も足も、棒のようにつっぱっている。救急車を呼ぶ声が聞こえる。"
+    "text": "体が熱い。わきに体温計がはさまれて、四十度一分、という声がする。手も足も、棒のようにつっぱっている。救急車を呼ぶ声が聞こえる。",
+    "bound": true
    }
   ],
   "end": {
@@ -1324,6 +1330,7 @@
   "season": "summer",
   "weather": "any",
   "aware": false,
+  "bound": true,
   "beats": [
    {
     "t": "08:30",
@@ -1378,6 +1385,7 @@
   "season": "any",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "07:30",
@@ -1431,6 +1439,7 @@
   "season": "any",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "07:30",
@@ -1712,6 +1721,7 @@
   "season": "winter",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "11:00",
@@ -2041,6 +2051,8 @@
   "season": "any",
   "weather": "clear",
   "aware": false,
+  "mute": true,
+  "bound": true,
   "beats": [
    {
     "t": "07:00",
@@ -2379,7 +2391,8 @@
     "t": "12:00",
     "stage": "washitsu",
     "pos": "sit",
-    "text": "縁側の日だまりで、茶碗蒸しを食べる。ひと口ごとに、ごくんと確かめる。きょうが何曜日かは分からないが、ひいきの球団の四番の名前は言える。"
+    "text": "縁側の日だまりで、茶碗蒸しを食べる。ひと口ごとに、ごくんと確かめる。きょうが何曜日かは分からないが、ひいきの球団の四番の名前は言える。",
+    "bound": true
    },
    {
     "t": "16:30",
@@ -2421,6 +2434,7 @@
   "season": "any",
   "weather": "clear",
   "aware": false,
+  "mute": true,
   "beats": [
    {
     "t": "20:00",
@@ -2859,6 +2873,7 @@
   "season": "spring",
   "weather": "any",
   "aware": false,
+  "bound": true,
   "beats": [
    {
     "t": "08:00",
@@ -2913,6 +2928,7 @@
   "season": "summer",
   "weather": "any",
   "aware": false,
+  "mute": true,
   "beats": [
    {
     "t": "06:00",

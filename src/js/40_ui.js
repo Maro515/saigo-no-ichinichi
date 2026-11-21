@@ -8,6 +8,7 @@
       this.root = document.documentElement;
       this.advanceWaiters = [];
       this.onRecall = null; this.onQuit = null; this.onStart = null; this.onAgain = null; this.onHome = null; this.onSound = null;
+      this.onUse = null; this.onRest = null; this.onPace = null; this.onStick = null;
       this.readSpeed = 1;
       this.auto = U.store.get('si.auto', true);      // 文章を自動で送るか
       this.reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -20,6 +21,11 @@
       el('btnHome').addEventListener('click', () => { if (this.onHome) this.onHome(); });
       for (const id of ['btnSound', 'btnSound0']) el(id).addEventListener('click', () => { if (this.onSound) this.onSound(); });
       el('btnAuto').addEventListener('click', () => { this.setAuto(!this.auto); });
+      el('btnRest').addEventListener('click', () => { if (this.onRest) this.onRest(); });
+      /* 一時間を何分で過ごすか。はじめの画面では選び、体験のあいだは押すたびに 1 分ずつ変わる */
+      for (const b of document.querySelectorAll('[data-pace]')) b.addEventListener('click', () => { if (this.onPace) this.onPace(parseInt(b.dataset.pace, 10)); });
+      el('btnPace').addEventListener('click', () => { if (this.onPace) this.onPace((Math.round(this.paceMin || 2) % 5) + 1); });
+      this._bindStick();
       this.setAuto(this.auto);
       for (const id of ['btnLedger', 'btnLedger2']) el(id).addEventListener('click', () => this.openLedger(null));
       el('btnLedgerClose').addEventListener('click', () => el('ledger').close());
@@ -30,8 +36,60 @@
         if (e.code === 'Escape') { if (this.onQuit && !el('hud').hidden) this.onQuit(); return; }
         const tag = (e.target && e.target.tagName) || '';
         if (tag === 'BUTTON') return;
-        if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (!this.advance() && this.onRecall && !el('btnRecall').hidden) this.onRecall(); }
+        if (e.repeat) return;
+        if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (this.advance()) return; if (this.onUse && this.onUse()) return; if (this.onRecall && !el('btnRecall').hidden) this.onRecall(); }
+        else if (e.code === 'KeyE' || e.code === 'KeyF') { if (this.onUse) this.onUse(); }
+        else if (e.code === 'KeyC') { if (this.onRest && !el('btnRest').hidden) this.onRest(); }
       });
+    }
+
+    /* 画面の左下の円。指を置いた向きへ歩く */
+    _bindStick() {
+      const base = el('stick'), knob = el('stickKnob');
+      let pid = null;
+      const set = (e) => {
+        const r = base.getBoundingClientRect(), R = r.width / 2;
+        let x = (e.clientX - (r.left + R)) / R, y = (e.clientY - (r.top + R)) / R;
+        const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+        knob.style.transform = `translate(${x * R * 0.55}px, ${y * R * 0.55}px)`;
+        if (this.onStick) this.onStick(Math.abs(x) < 0.15 ? 0 : x, Math.abs(y) < 0.15 ? 0 : -y);
+      };
+      const end = (e) => { if (e.pointerId !== pid) return; pid = null; knob.style.transform = ''; if (this.onStick) this.onStick(0, 0); };
+      base.addEventListener('pointerdown', (e) => { if (pid != null) return; pid = e.pointerId; try { base.setPointerCapture(pid); } catch (err) { /* 古いブラウザ */ } set(e); e.preventDefault(); });
+      base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
+      base.addEventListener('pointerup', end); base.addEventListener('pointercancel', end);
+    }
+    stick(show) { const b = el('stick'); if (b.hidden === !show) return; b.hidden = !show; if (!show) { el('stickKnob').style.transform = ''; if (this.onStick) this.onStick(0, 0); } }
+
+    /* ---- 自由に過ごすあいだの印 ---- */
+    /* 目の前の相手や場所にできること（「妻に話しかける」「腰をおろす」） */
+    prompt(text, key) {
+      const p = el('prompt');
+      if (!text) { p.classList.remove('is-on'); return; }
+      el('promptText').textContent = text; el('promptKey').textContent = key || '';
+      p.hidden = false; requestAnimationFrame(() => p.classList.add('is-on'));
+    }
+    /* 見つめている思い出の品の名前 */
+    spot(text) {
+      if ((text || '') === (this._spot || '')) return;
+      this._spot = text || '';
+      const p = el('spot');
+      if (!text) { p.classList.remove('is-on'); return; }
+      p.textContent = text; p.hidden = false; requestAnimationFrame(() => p.classList.add('is-on'));
+    }
+    /* 目を閉じるボタン。null で隠す */
+    rest(state) {
+      const b = el('btnRest');
+      if (state == null) { b.hidden = true; this._actVis(); return; }
+      b.hidden = false; b.textContent = state ? '目をあける' : '目を閉じる'; b.setAttribute('aria-pressed', state ? 'true' : 'false');
+      this._actVis();
+    }
+    pace(v) {
+      this.paceMin = v;
+      const n = Math.round(v), ja = (v >= 1 && v <= 5 && Math.abs(v - n) < 0.01) ? U.kanji(n) + '分' : v + '分';
+      el('btnPace').textContent = '一時間 ' + ja;
+      for (const b of document.querySelectorAll('[data-pace]')) b.setAttribute('aria-pressed', parseInt(b.dataset.pace, 10) === n ? 'true' : 'false');
+      el('paceNote').textContent = '朝から最期までは、ふつう十二時間ほどです。この速さなら、' + U.kanji(Math.max(1, Math.round(12 * v))) + '分前後の体験になります。目を閉じているあいだは、時計が速く進みます。';
     }
 
     /* ---- 先へ進む合図 ---- */
@@ -64,7 +122,7 @@
       });
     }
     readMs(text) { return (1500 + text.length * 105) / this.readSpeed; }
-    _actVis() { el('act').hidden = el('btnNext').hidden && el('btnRecall').hidden; }
+    _actVis() { el('act').hidden = el('btnNext').hidden && el('btnRecall').hidden && el('btnRest').hidden; }
 
     /* ---- まぶたと幕 ---- */
     lids(state, ms, token) {
@@ -275,7 +333,7 @@
     /* 体験の画面をすべて片づける */
     clearPlay() {
       this.clearNarr(); this.clearMemory(); this.clearCard(); this.clearSoma(); this.hint(''); this.reticle(false, 0);
-      this.recallButton(false); el('btnNext').hidden = true; this._actVis(); this.hud(false);
+      this.recallButton(false); el('btnNext').hidden = true; this.rest(null); this.prompt(null); this.spot(null); this.stick(false); this._actVis(); this.hud(false);
       this.advanceWaiters.length = 0;
     }
   }

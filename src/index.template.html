@@ -18,6 +18,7 @@
 <div id="hud" class="hud" hidden>
   <p class="hud-clock"><span id="hudTime" class="hud-time">00:00</span><span id="hudPlace" class="hud-place"></span></p>
   <div class="hud-actions">
+    <button id="btnPace" class="chip" type="button" title="一時間を何分で過ごすか">一時間 二分</button>
     <button id="btnAuto" class="chip" type="button" aria-pressed="true">自動送り</button>
     <button id="btnSound" class="chip" type="button" aria-pressed="true">音あり</button>
     <button id="btnQuit" class="chip" type="button">やめる</button>
@@ -26,12 +27,16 @@
 <div id="reticle" class="reticle" hidden aria-hidden="true">
   <svg viewBox="0 0 44 44"><circle class="reticle-prog" id="reticleProg" cx="22" cy="22" r="17" pathLength="100"/><circle class="reticle-dot" cx="22" cy="22" r="1.5"/></svg>
 </div>
+<p id="prompt" class="prompt" aria-live="polite" hidden><span id="promptText"></span><kbd id="promptKey" class="prompt-key"></kbd></p>
+<p id="spot" class="spot" aria-hidden="true" hidden></p>
+<div id="stick" class="stick" aria-hidden="true" hidden><i id="stickKnob" class="stick-knob"></i></div>
 <p id="hint" class="hint" aria-live="polite" hidden></p>
 <div id="card" class="card" hidden><div id="cardText" class="card-text" aria-live="polite"></div></div>
 <div id="mem" class="mem" hidden><p id="memLabel" class="mem-label"></p><div id="memText" class="mem-text" aria-live="polite"></div></div>
 <div id="soma" class="soma" hidden aria-hidden="true"></div>
 <div id="narr" class="narr" hidden><p id="narrText" class="narr-text" aria-live="polite"></p></div>
 <div id="act" class="act" hidden>
+  <button id="btnRest" class="btn btn-quiet" type="button" aria-pressed="false" hidden>目を閉じる</button>
   <button id="btnRecall" class="btn btn-quiet" type="button" hidden>灯を見る</button>
   <button id="btnNext" class="btn btn-quiet" type="button" hidden>つづける</button>
 </div>
@@ -40,7 +45,7 @@
 <main id="title" class="title">
   <div class="title-head">
     <h1 class="title-name">最期の一日</h1>
-    <p class="title-lead">ある人の、最後の一日をたどります。<br>誰の、どんな一日になるかは、選べません。</p>
+    <p class="title-lead">ある人の、最後の一日を過ごします。<br>誰の、どんな一日になるかは、選べません。<br>最期の時刻が来るまで、時計は進みつづけます。</p>
   </div>
   <div class="title-foot">
     <p id="titleCount" class="title-count"></p>
@@ -50,6 +55,17 @@
         <button id="btnLedger" class="btn btn-quiet" type="button">過去帳</button>
         <button id="btnSound0" class="btn btn-quiet" type="button" aria-pressed="true">音あり</button>
       </div>
+    </div>
+    <div class="pace" role="group" aria-labelledby="paceLabel">
+      <p id="paceLabel" class="pace-label">一時間を、何分で過ごすか</p>
+      <div class="pace-opts">
+        <button class="chip" type="button" data-pace="1" aria-pressed="false">一分</button>
+        <button class="chip" type="button" data-pace="2" aria-pressed="true">二分</button>
+        <button class="chip" type="button" data-pace="3" aria-pressed="false">三分</button>
+        <button class="chip" type="button" data-pace="4" aria-pressed="false">四分</button>
+        <button class="chip" type="button" data-pace="5" aria-pressed="false">五分</button>
+      </div>
+      <p id="paceNote" class="pace-note"></p>
     </div>
     <p class="title-note">死を扱います。事故や病気の場面があります。つらくなったら、いつでもやめてください。</p>
     <p id="titleError" class="title-error" role="alert" hidden></p>

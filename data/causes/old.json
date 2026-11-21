@@ -501,7 +501,8 @@
     "stage": "bath",
     "pos": "sit",
     "with": true,
-    "text": "{大切な人}に背中を支えられて、湯船に沈む。ゆずがふたつ浮いている。皮を指で押すと、においがはじける。"
+    "text": "{大切な人}に背中を支えられて、湯船に沈む。ゆずがふたつ浮いている。皮を指で押すと、においがはじける。",
+    "bound": true
    },
    {
     "t": "19:00",
@@ -1228,6 +1229,7 @@
   "season": "summer",
   "weather": "clear",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "09:00",
@@ -1390,6 +1392,7 @@
   "season": "summer",
   "weather": "clear",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "09:00",

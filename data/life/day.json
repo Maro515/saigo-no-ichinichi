@@ -1,0 +1,24 @@
+{
+  "world": [
+    {"t": "06:00", "in": ["hospital", "hospice", "facility"], "text": "廊下の明かりがつく。足音が、行き来しはじめる。"},
+    {"t": "07:40", "in": ["hospital", "hospice", "facility"], "text": "配膳車の音が、廊下を近づいてくる。", "snd": "cart"},
+    {"t": "12:00", "in": ["hospital", "hospice", "facility"], "text": "昼食の配膳車が、廊下を通っていく。", "snd": "cart"},
+    {"t": "18:00", "in": ["hospital", "hospice", "facility"], "text": "夕食の配膳車が、廊下を近づいてくる。", "snd": "cart"},
+    {"t": "21:00", "in": ["hospital", "hospice", "facility"], "text": "消灯の時刻になる。廊下の明かりが落ちる。"},
+    {"t": "06:10", "in": ["living", "washitsu", "bedroom"], "text": "どこかの家で、雨戸をあける音がする。"},
+    {"t": "12:00", "in": ["living", "washitsu", "bedroom", "street", "park", "field", "river"], "text": "遠くで、正午のチャイムが鳴っている。", "snd": "tune", "arg": "noon"},
+    {"t": "12:00", "in": ["office", "worksite"], "text": "昼休みのチャイムが鳴る。", "snd": "tune", "arg": "noon"},
+    {"t": "15:30", "in": ["living", "washitsu", "bedroom", "street", "park"], "if": "dry", "text": "どこかで、子どもたちの声がしている。", "snd": "kids"},
+    {"t": "17:00", "in": ["living", "washitsu", "bedroom", "street", "park"], "text": "夕方のチャイムが、町に流れる。", "snd": "tune", "arg": "evening"},
+    {"t": "17:00", "in": ["field", "river"], "text": "夕方のチャイムが、遠くから流れてくる。", "snd": "tune", "arg": "evening"},
+    {"t": "18:10", "in": ["living", "washitsu", "street"], "text": "どこかの家から、夕飯のにおいがしてくる。"},
+    {"t": "22:40", "in": ["living", "washitsu", "bedroom"], "text": "遠くを、電車が通っていく。"}
+  ],
+  "notes": {
+    "neighbor": {"home": "近所の人が、顔を見せに来ている。", "out": "近所の人が、そこに立っている。", "leave": "近所の人は、会釈して帰っていく。"},
+    "nurse": {"care": "看護師が、ベッドのそばに来ている。", "leave": "看護師は、次の部屋へ向かう。"},
+    "icunurse": {"care": "看護師が、ベッドのそばに来ている。", "leave": "看護師は、機械の数字を確かめて、離れていく。"},
+    "hospicenurse": {"care": "看護師が、そっと入ってくる。", "leave": "看護師は、静かに出ていく。"},
+    "carer": {"care": "職員が、様子を見に来ている。", "leave": "職員は、廊下へ出ていく。"}
+  }
+}

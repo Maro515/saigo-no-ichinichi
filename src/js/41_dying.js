@@ -316,6 +316,7 @@
       ui.narrShow(lines[blow], true);
       await this.wait(U.clamp(ui.readMs(lines[blow]) * 0.34, 600, 1250));
       this.mark('blow');
+      this.app.seize();
       /* 断ち切られる。光、暗闇、無音 */
       ui.hud(false); ui.narrCut(); ui.hint('');
       a.blow({ glass: st === 'car' || this.cause.cat === 'dis', metal: st === 'car' || st === 'worksite' || trf });
@@ -367,6 +368,7 @@
       }
       if (hit === 0) await this.wait(1700 + this.r() * 1500);
       this.mark('strike');
+      this.app.seize();
       /* 発作 */
       ui.narrCut();
       const arrest = !chest && !head;                              // 痛みもなく、ただ崩れる
@@ -417,6 +419,7 @@
       for (let i = 0; i < n; i++) {
         const k = i - hit, x = k < 0 ? 0 : (k + 1) / (n - hit);
         if (k === 0) {
+          this.app.seize();
           fx.onset(tags);
           if (choke) {                                              // のどがふさがる。息の音は、出ない
             fx.manualBreath = true; a.breath(0, 0);
@@ -454,6 +457,7 @@
     /* ========== 引いていく ========== */
     async ebb() {
       const { fx, lines, tags } = this, n = lines.length, hit = this.end.hit;
+      this.app.seize();
       this.startBreath();
       for (let i = 0; i < n; i++) {
         const x = i < hit ? 0 : 0.25 + 0.6 * (i - hit + 1) / (n - hit), u = n > 1 ? i / (n - 1) : 1;
@@ -480,6 +484,7 @@
     async finale(last) {
       const { ui, fx, audio: a, env: e, rig, tags, app } = this, ebb = this.mode === 'ebb';
       ui.clearNarr(); this.mark('finale');
+      this.app.seize();
       this.level(1);
       rig.enabled = false;
       /* 首の力が抜ける */

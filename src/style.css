@@ -41,12 +41,15 @@ h1, h2, p { font-style: normal; }
 .hud {
   position: fixed; top: 0; left: 0; right: 0; z-index: 12; pointer-events: none;
   display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md);
-  padding: max(var(--space-md), env(safe-area-inset-top)) max(var(--space-lg), env(safe-area-inset-right)) 0 max(var(--space-lg), env(safe-area-inset-left));
+  padding: max(var(--space-md), env(safe-area-inset-top)) max(var(--space-lg), env(safe-area-inset-right)) var(--space-xl) max(var(--space-lg), env(safe-area-inset-left));
+  background: linear-gradient(to bottom, var(--color-veil), var(--color-scrim-0));      /* 白い部屋や明るい空の上でも、時刻とボタンが読めるように */
 }
 .hud-clock { margin: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .hud-time { font-family: var(--font-display); font-size: var(--text-xl); line-height: 1.2; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
-.hud-place { font-size: var(--text-xs); color: var(--color-muted); letter-spacing: 0.14em; white-space: nowrap; }
-.hud-actions { display: flex; gap: var(--space-xs); pointer-events: auto; }
+.hud-place { font-size: var(--text-xs); color: var(--color-ink); letter-spacing: 0.14em; white-space: nowrap; }
+.hud .chip { color: var(--color-ink); background: var(--color-scrim); border-color: var(--color-neutral); }
+.hud-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-xs); pointer-events: auto; min-width: 0; }
+.chip[aria-pressed="true"][data-pace] { color: var(--color-paper); background: var(--color-accent); border-color: var(--color-accent); }
 
 /* ---- ボタン ---- */
 .btn, .chip {
@@ -92,6 +95,7 @@ h1, h2, p { font-style: normal; }
   margin: 0; max-width: 31em; min-height: 3.9em; text-align: center;
   font-family: var(--font-display); font-size: var(--text-narr); line-height: 1.95; letter-spacing: 0.08em;
   word-break: auto-phrase; text-wrap: balance; overflow-wrap: anywhere;
+  -webkit-text-stroke: 0.09em var(--color-shadow); paint-order: stroke fill;       /* 明るい床の上でも読めるように、暗いふちをつける */
   opacity: 0; transition: opacity var(--dur-text) var(--ease-out);
 }
 .narr-text.is-on { opacity: 1; }
@@ -148,6 +152,7 @@ h1, h2, p { font-style: normal; }
 .soma span.is-voice {
   writing-mode: horizontal-tb; white-space: normal; max-width: min(15em, 42vw);
   font-family: var(--font-body); font-size: var(--text-sm); line-height: 1.8; letter-spacing: 0.18em;
+  word-break: auto-phrase; text-wrap: balance;
   transition-duration: 700ms;
 }
 .soma span.is-voice.is-on { opacity: 0.94; }
@@ -178,9 +183,34 @@ h1, h2, p { font-style: normal; }
 .reticle-dot { fill: var(--color-ink); opacity: 0.55; }
 .reticle-prog { fill: none; stroke: var(--color-accent); stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--p, 0) * 100); }
 .act {
-  position: fixed; z-index: 14; display: flex; gap: var(--space-sm);
+  position: fixed; z-index: 14; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-sm); max-width: calc(100% - 2 * var(--space-lg));
   right: max(var(--space-lg), env(safe-area-inset-right)); bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
 }
+
+/* ---- 自由に過ごすあいだの印（できること、品の名前、歩く円） ---- */
+.prompt, .spot {
+  position: fixed; left: 0; right: 0; z-index: 10; pointer-events: none; margin: 0 auto; width: fit-content; max-width: calc(100% - 2 * var(--space-lg));
+  text-align: center; font-size: var(--text-sm); letter-spacing: 0.16em; line-height: 1.6; color: var(--color-ink);
+  text-shadow: 0 1px 2px var(--color-shadow), 0 0 12px var(--color-shadow), 0 0 26px var(--color-shadow);
+  opacity: 0; transition: opacity var(--dur-long) var(--ease-out);
+}
+.prompt { top: calc(50% + 76px); padding: var(--space-2xs) var(--space-sm); background: var(--color-veil); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-sm); }
+.spot { top: calc(50% - 62px); font-family: var(--font-display); letter-spacing: 0.3em; text-indent: 0.3em; }
+.prompt.is-on, .spot.is-on { opacity: 1; }
+.prompt-key { margin-left: var(--space-sm); padding: 0 0.5em; font: inherit; font-size: var(--text-xs); letter-spacing: 0.08em; color: var(--color-muted); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-sm); }
+.prompt-key:empty { display: none; }
+.stick {
+  position: fixed; z-index: 14; left: max(var(--space-lg), env(safe-area-inset-left)); bottom: calc(var(--space-xl) + env(safe-area-inset-bottom));
+  width: 112px; height: 112px; border-radius: 50%; touch-action: none;
+  border: var(--rule-hair) solid var(--color-neutral); background: var(--color-veil);
+  display: grid; place-items: center;
+}
+.stick-knob { display: block; width: 44px; height: 44px; border-radius: 50%; border: var(--rule-hair) solid var(--color-ink); background: var(--color-scrim); pointer-events: none; }
+.pace { margin: var(--space-lg) 0 0; }
+.pace-label { margin: 0 0 var(--space-xs); font-size: var(--text-sm); letter-spacing: 0.14em; color: var(--color-ink); }
+.pace-opts { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.pace-opts .chip { min-width: 3.6em; font-size: var(--text-sm); }
+.pace-note { margin: var(--space-xs) 0 0; font-size: var(--text-xs); line-height: 1.8; color: var(--color-muted); word-break: auto-phrase; }
 
 /* ---- はじめの画面 ---- */
 .title {
@@ -271,6 +301,11 @@ h1, h2, p { font-style: normal; }
   .hud { padding-left: var(--space-md); padding-right: var(--space-md); }
   .hud-place { white-space: normal; max-inline-size: 8.5em; line-height: 1.5; }      /* 長い場所の名前は、ボタンに重ならないように折り返す */
   .soma span.is-sense { font-size: var(--text-sm); }
+  .soma span.is-voice { max-width: 62vw; letter-spacing: 0.12em; }
+  .hud-actions { max-width: 62%; }
+  .stick { bottom: calc(168px + env(safe-area-inset-bottom)); left: var(--space-md); width: 104px; height: 104px; }
+  .act { gap: var(--space-xs); }
+  .pace { margin-top: var(--space-md); }
 }
 
 /* ---- 動きを減らす設定 ---- */

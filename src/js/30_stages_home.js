@@ -13,6 +13,19 @@
     };
   };
 
+  /* 斜めに置いた箱の範囲を、軸にそろった小さい長方形の集まりで表す（walk.holes 用）。
+     len は箱の x 方向（回す前）、wid は z 方向の長さ。自動判定で拾えない、背の高い大きな箱や、細い柱だけの物に使う */
+  S.slantHoles = function (cx, cz, ry, len, wid, pad) {
+    const out = [], n = Math.max(1, Math.ceil(len / 0.5)), m = Math.max(1, Math.ceil(wid / 0.5)), c = Math.cos(ry || 0), s = Math.sin(ry || 0);
+    const hl = len / n / 2, hw = wid / m / 2, ex = hl * Math.abs(c) + hw * Math.abs(s) + (pad || 0), ez = hl * Math.abs(s) + hw * Math.abs(c) + (pad || 0);
+    for (let i = 0; i < n; i++) for (let k = 0; k < m; k++) {
+      const lx = -len / 2 + (i + 0.5) * len / n, lz = -wid / 2 + (k + 0.5) * wid / m;
+      const x = cx + lx * c + lz * s, z = cz - lx * s + lz * c;
+      out.push([x - ex, z - ez, x + ex, z + ez]);
+    }
+    return out;
+  };
+
   /* 窓の外の、ふつうの住宅地。南（+Z）側に置く */
   S.neighborhood = function (g, c, z0, y0, lamps) {
     const sp = K.seasonal(c), rng = U.rng(c.seed + 77);
@@ -114,6 +127,14 @@
       },
       body: { lie: { blanket: P.blanketWarm, sleeve: '#9aa7b5' }, sit: { sleeve: '#7d8794', legs: '#4a4f5c' }, stand: { sleeve: '#7d8794' } },
       spots: [[1.9, 1.3, zS + 3.6], [-1.45, 0.5, zS + 3.1], [0.5, 0.3, zS + 0.62], [-1.2, 0.55, 1.05], [-W / 2 + 0.45, 1.0, -0.95], [W / 2 - 0.3, 1.3, -1.3], [W / 2 - 0.1, 1.98, 0.5]],
+      spotNames: [kind === 'momiji' ? '庭のもみじ' : (kind === 'sakura' ? '庭の桜' : '庭の木'), '石灯籠', '縁側の座布団', '急須と湯のみ', '仏壇', '写真立て', '壁の時計'],
+      /* 畳の間、障子のあいだの敷居、縁側（床と同じ高さ）、庭（縁側より 0.45 低い） */
+      walk: {
+        y: 0,
+        rects: [[-W / 2, -zS, W / 2, zS], [-0.84, zS, 0.84, zS + 0.14], [-W / 2 - 0.25, zS + 0.14, W / 2 + 0.25, zS + 1.12], [-4.2, zS + 1.12, 4.2, zS + 5.3, y0]],
+        places: [[-W / 2 - 0.25, zS + 0.14, W / 2 + 0.25, zS + 1.12, '自宅の縁側'], [-4.2, zS + 1.12, 4.2, zS + 5.3, '自宅の庭']]      // そこにいるあいだ、画面の場所の名前が変わる
+      },
+      meet: [{ p: [-0.75, y0, zS + 2.1], ry: PI }, { p: [1.25, y0, zS + 2.7], ry: PI + 0.3 }],
       companion: {
         lie: { p: [0.98, 0, 0.75], ry: -2.5, pose: 'seiza' },
         sit: { p: [-0.35, 0, zS + 0.6], ry: 0.25, pose: 'seiza' },

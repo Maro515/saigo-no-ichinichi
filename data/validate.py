@@ -16,8 +16,8 @@ SEASONS = {'any', 'spring', 'summer', 'autumn', 'winter'}
 WEATHERS = {'any', 'clear', 'cloudy', 'rain', 'snow', 'fog', 'storm'}
 JOBS = {'office', 'construction', 'factory', 'farm', 'fishery', 'forestry', 'driver', 'medical', 'teacher', 'craft',
         'shop', 'public', 'art', 'home', 'student'}
-TOP_KEYS = {'id', 'cat', 'group', 'name', 'place', 'age', 'sex', 'season', 'weather', 'aware', 'job', 'beats', 'end', 'note'}
-BEAT_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'text'}
+TOP_KEYS = {'id', 'cat', 'group', 'name', 'place', 'age', 'sex', 'season', 'weather', 'aware', 'job', 'beats', 'end', 'note', 'mute', 'bound'}
+BEAT_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'text', 'bound'}
 END_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'fx', 'lines', 'hit', 'state'}
 STATES = {'vent', 'still', 'choke', 'quiet', 'arrest', 'weak', 'brady'}
 PH = re.compile(r'\{([^}]*)\}')
@@ -97,7 +97,7 @@ def check_entry(e, prefix, err_all):
     for k in e:
         if k not in TOP_KEYS:
             err(f'知らない項目 {k}')
-    for k in TOP_KEYS - {'job'}:
+    for k in TOP_KEYS - {'job', 'mute', 'bound'}:
         if k not in e:
             err(f'項目がない: {k}')
     if prefix and not re.match(rf'^{re.escape(prefix)}-\d{{3}}$', str(eid)):

@@ -147,7 +147,13 @@
       this._sine(t, 95, 28, 0.7, 0.8, this.body);
     }
     thud(v) { if (this.ok()) { const t = this.ctx.currentTime; this._noise(t, 0.2, 'lowpass', 260, 0.7, 0.35 * (v || 1), this.body); this._sine(t, 70, 40, 0.25, 0.4 * (v || 1), this.body); } }
-    step() { if (this.ok()) this._noise(this.ctx.currentTime, 0.09, 'lowpass', 340, 0.7, 0.045); }
+    /* 足音。外では、砂や舗装をふむ、かわいた音がまじる */
+    step(out) {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime;
+      this._noise(t, 0.09, 'lowpass', 340, 0.7, 0.045);
+      if (out) this._noise(t + 0.01, 0.07, 'bandpass', 1500 + Math.random() * 700, 1.1, 0.016);
+    }
     blink() { }
 
     /* ---------- 最期の場面のための音 ---------- */
@@ -224,6 +230,39 @@
       for (const fq of [415, 494]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fq; o.connect(lp); o.start(t); o.stop(t + dur + 0.1); }
       lp.connect(gg); gg.connect(this.amb);
     }
+    /* 町に流れる、遠いチャイム。スピーカーの音が、こだまして届く（evening は「家路」のふし、noon は時計台の鐘のふし） */
+    tune(name) {
+      if (!this.ok()) return;
+      const c = this.ctx, t0 = c.currentTime + 0.1;
+      const N = { G3: 196.0, C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.0 };
+      const seq = name === 'evening'
+        ? [['E4', 1.5], ['G4', 0.5], ['G4', 2], ['E4', 1.5], ['D4', 0.5], ['C4', 2], ['D4', 1.5], ['E4', 0.5], ['G4', 1.5], ['E4', 0.5], ['D4', 3]]
+        : [['E4', 1], ['C4', 1], ['D4', 1], ['G3', 2], ['G3', 1], ['D4', 1], ['E4', 1], ['C4', 2]];
+      const beat = name === 'evening' ? 0.82 : 0.7;
+      const out = c.createGain(), bp = c.createBiquadFilter(), dl = c.createDelay(1.0), fb = c.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 1300; bp.Q.value = 0.7; dl.delayTime.value = 0.31; fb.gain.value = 0.42;
+      out.connect(bp); bp.connect(this.amb); bp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(this.amb);
+      let t = t0;
+      for (const [n, d] of seq) {
+        const f = N[n] * 2, dur = d * beat, g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.02, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.9);
+        for (const [m, a] of [[1, 1], [2, 0.35], [3, 0.12]]) { const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f * m; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(g); o.start(t); o.stop(t + dur + 1); }
+        g.connect(out); t += dur;
+      }
+      setTimeout(() => { try { out.disconnect(); bp.disconnect(); dl.disconnect(); fb.disconnect(); } catch (e) { /* もう切れている */ } }, (t - t0 + 6) * 1000);
+    }
+    /* 廊下を行く配膳車。車輪のがたつきと、食器のふれ合う音 */
+    cart() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < 22; i++) {
+        const g = Math.sin(Math.PI * i / 21) * 0.03 + 0.004, tt = t + i * 0.24 + Math.random() * 0.05;
+        this._noise(tt, 0.07, 'bandpass', 1500 + Math.random() * 1400, 3, g);
+        if (i % 5 === 2) this._sine(tt, 2400 + Math.random() * 900, 2300, 0.18, g * 0.5);
+      }
+    }
+    /* 遠くの子どもたちの声 */
+    kids() { if (!this.ok()) return; for (let i = 0; i < 4; i++) setTimeout(() => this.murmur(3 + Math.floor(Math.random() * 3), 0.3, 300 + Math.random() * 90), i * 900 + Math.random() * 400); }
     /* 人の声らしい、言葉にならないつぶやき（まわりの音として鳴るので、こもり方も一緒に変わる） */
     murmur(n, g, pitch) {
       if (!this.ok()) return;

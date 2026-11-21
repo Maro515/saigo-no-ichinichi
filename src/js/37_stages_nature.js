@@ -89,6 +89,12 @@
       },
       body: { stand: { sleeve: '#7f8a7a', shoe: '#3a352e' }, sit: { sleeve: '#7f8a7a', legs: '#5c5648' } },
       spots: [[-13, 2.2, 12], [-7, 1.9, 5.5], [0.6, 1.4, 9.5], [16, 3.5, 30], [-28.5, 3.3, 31.5], [-2.1, 5, 22], [2.35, 0.3, 4], [-20, 2.5, -8]],
+      /* 2 つめは、かかしの立つ季節（夏・秋）とそれ以外で変わる */
+      spotNames: ['トラクター', (!sp.snowy && (s === 'summer' || s === 'autumn')) ? 'かかし' : (sp.snowy ? '雪の田んぼ' : (s === 'spring' ? '水を張った田' : '刈りあとの田')), '軽トラック', '柿の木', '鎮守の鳥居', '電柱', '用水路', 'ビニールハウス'],
+      /* 農道と道ばた（東は用水路の手前まで）、西の田のあいだのあぜ 2 本。
+         あぜは幅 0.7 m。長方形を両側へ 0.15 広げてあり、体の中心があぜの上（z 6.0〜6.6、−14.6〜−14.0）を動く */
+      walk: { y: 0, rects: [[-2.4, -32, 1.9, 30], [-20, 5.85, -2.4, 6.85], [-20, -14.85, -2.4, -13.85]] },
+      meet: [{ p: [-1.0, 0, 4.8], ry: 2.9 }, { p: [1.0, 0, -3.5], ry: -0.17 }],
       companion: { stand: { p: [-0.9, 0, 2.2], ry: 2.6, pose: 'stand' }, sit: { p: [-1.5, 0, 3.4], ry: 2.9, pose: 'stand' }, walk: { p: [1.0, 0, -25], ry: 0.3, pose: 'stand' } },
       amb: { nature: 1, river: 0.14 },
       onLight: S.lampSetter(lamps, (env) => { for (const f of waters) f(env); })
@@ -107,6 +113,7 @@
     geo.computeVertexNormals();
     const gm = K.mTex(K.tex.rep(K.tex.noise(sp.snowy ? P.snow : (c.season === 'autumn' ? '#77703f' : (c.season === 'winter' ? '#746d54' : '#5a7444')), 0.16), 30, 30), { rough: 1 });
     const ground = new T.Mesh(geo, gm); ground.receiveShadow = true; g.add(ground);
+    ground.userData.noNav = true;      // 地面そのものは、歩ける範囲の調べから外す（高さは walk.h で渡す。入れると調べに 4 秒かかる）
     /* 踏みあと */
     const tm = K.m(sp.snowy ? '#dfe4e8' : '#8a7458', { rough: 1 });
     for (let x = -44; x < 44; x += 1.6) { const p = K.plane(1.9, 1.1, tm, x, H(x, trailZ(x)) + 0.03, trailZ(x), { noShadow: true }); p.rotation.y = -Math.atan(0.198 * Math.cos(x * 0.09)); p.rotation.z = Math.atan((H(x + 0.8, trailZ(x + 0.8)) - H(x - 0.8, trailZ(x - 0.8))) / 1.6); g.add(p); }
@@ -149,6 +156,10 @@
     g.add(K.ridge({ r: 360, hMin: 24, hMax: 100, color: cols[2], seed: c.seed + 7, n: 48 }));
     const path = []; for (let x = -34; x <= 34; x += 6.8) path.push([x, H(x, trailZ(x)) + 1.62, trailZ(x)]);
     const sy = H(vx + 0.4, vz - 0.9);
+    /* 歩けるのは、踏みあとの両わき 1.4 m と、見晴らしのよい場所のまわり */
+    const wr = [[vx - 4, vz - 3.2, vx + 4, vz + 1.6]];
+    for (let x = -36; x < 36; x += 2) { const tz = trailZ(x + 1); wr.push([x, tz - 1.4, x + 2, tz + 1.4]); }
+    const mx1 = vx + 3.4, mx2 = vx - 3.6;
     return {
       group: g, indoor: false, label: '山道', shadow: 34, shadowFollow: true,
       anchors: {
@@ -158,6 +169,9 @@
       },
       body: { stand: { sleeve: '#b8563a', shoe: '#4a3f33' }, sit: { sleeve: '#b8563a', legs: '#4f5562' } },
       spots: [[vx + 1.6, vy + 1.3, vz + 1.3], [vx - 2.2, H(vx - 2.2, vz - 1.6) + 1.2, vz - 1.6], [vx + 14, vy + 3, -60], [vx - 8, vy + 2, vz - 9], [vx + 8, vy + 3.5, vz + 4], [vx + 0.4, sy + 0.9, vz - 0.9]],
+      spotNames: ['道しるべ', '道ばたの積み石', '谷の向こうの山', '谷の森', '山側の木立', '腰かけ岩'],
+      walk: { y: vy, h: H, rects: wr },
+      meet: [{ p: [mx1, H(mx1, trailZ(mx1)), trailZ(mx1)], ry: -1.9 }, { p: [mx2, H(mx2, trailZ(mx2)), trailZ(mx2)], ry: 1.46 }],
       companion: { stand: { p: [vx - 1.2, vy, vz - 0.6], ry: 2.8, pose: 'stand' }, sit: { p: [vx - 0.9, vy, vz - 0.8], ry: 3.0, pose: 'stand' }, walk: { p: [-32, H(-32, trailZ(-32)), trailZ(-32) + 0.4], ry: 1.6, pose: 'stand' } },
       petalBox: (c.season === 'autumn') ? [[vx - 12, vy - 2, vz - 10], [vx + 12, vy + 8, vz + 8]] : null,
       amb: { nature: 1, wind: 0.5 }
@@ -208,6 +222,10 @@
       },
       body: { stand: { sleeve: '#6f7f8c', shoe: '#3a352e' }, sit: { sleeve: '#6f7f8c', legs: '#4c4f58' } },
       spots: [[5, 0.5, 9], [-8, 0.9, 1.5], [10, 5, 41], [42, 6.5, 6], [-26, 3.2, -6.5], [-4, 2.4, 22.8], [14, 0.6, 3]],
+      spotNames: ['川の流れ', '河原の石', '向こう岸の木', '川にかかる橋', '水門', 'あしの茂み', '水ぎわ'],
+      /* 土手の上（高さ 3.02）から、斜面をおりて河原（0.2）の水ぎわまで。水門（大きな箱）は自動判定で拾えないので除く */
+      walk: { y: 0.2, h: (x, z) => U.clamp(1.662 - 0.4707 * (z + 9.03), 0.2, 3.02), rects: [[-36, -19.5, 34, 3.2]], holes: [[-27.8, -7.3, -24.2, -5.5]], start: [-1.8, 1.4] },
+      meet: [{ p: [1.8, 0.2, 2.8], ry: -2.4 }, { p: [-27, 3.02, -15.6], ry: -PI / 2 }],
       companion: { stand: { p: [-1.0, 0.2, 2.3], ry: 2.7, pose: 'stand' }, sit: { p: [-3.2, 0.2, 1.2], ry: 2.4, pose: 'stand' }, walk: { p: [-32.5, 3.02, -14.3], ry: 1.6, pose: 'stand' } },
       petalBox: [[-16, 0, -22], [16, 8, 4]],
       amb: { river: 1, nature: 0.8 },
@@ -256,6 +274,8 @@
     g.add(K.ridge({ r: 260, hMin: -4, hMax: 46, color: sp.hill, seed: c.seed + 5, n: 30, from: PI * 0.72, to: PI * 1.12, rough: 0.6 }));
     g.add(K.ridge({ r: 340, hMin: 0, hMax: 26, color: sp.hillFar, seed: c.seed + 6, n: 24, from: PI * 0.12, to: PI * 0.42, rough: 0.5 }));
     g.add(K.ridge({ r: 300, hMin: 16, hMax: 60, color: sp.hillFar, seed: c.seed + 7, n: 36, from: PI * 1.05, to: PI * 1.98 }));
+    /* 砂の面の高さ。浜は海へ向かってゆるく下がり、波打ちぎわ（z > 2.1）はぬれた砂の板 */
+    const sandH = (x, z) => z > 2.1 ? 0.06 : 0.2794 - 0.035 * (z + 8.965);
     return {
       group: g, indoor: false, label: '海辺', shadow: 32, shadowFollow: true,
       anchors: {
@@ -265,6 +285,10 @@
       },
       body: { stand: { sleeve: '#8a9aa8', shoe: '#d8b89a' }, sit: { sleeve: '#8a9aa8', legs: '#5a6272' } },
       spots: [[6, 0.5, 9], [-48, 9.6, 58], [9, 1.2, -6], [-41, 1.6, 20], [12, 0.9, -9], [20, 2.5, 60], [-5, 0.6, -3.6]],
+      spotNames: ['寄せる波', '灯台', '浜に上げた小舟', '港の漁船', '網と浮き玉', '水平線', '流木'],
+      /* 防潮堤の手前から、波打ちぎわまでの砂浜 */
+      walk: { y: 0, h: sandH, rects: [[-34, -21.3, 34, 3.4]] },
+      meet: [{ p: [1.2, sandH(1.2, 2.2), 2.2], ry: -2.8 }, { p: [-6.5, sandH(-6.5, -0.6), -0.6], ry: 2.0 }],
       companion: { stand: { p: [-1.3, 0.2, 0.2], ry: 2.8, pose: 'stand' }, sit: { p: [-4.2, 0.3, -3.6], ry: 2.6, pose: 'stand' }, walk: { p: [-24.5, 0.15, 1.6], ry: 1.6, pose: 'stand' } },
       amb: { sea: 1, wind: 0.4 },
       onLight: S.lampSetter(lamps, (env) => { tint(env); foam.material.color.setScalar(0.25 + 0.75 * Math.min(1, env.dayLight + 0.1)); }),
@@ -306,6 +330,9 @@
       },
       body: { stand: { sleeve: '#d9a23c', shoe: '#e6e8ea' }, sit: { sleeve: '#d9a23c', legs: '#d9a23c' } },
       spots: [[0.45, 1.2, 2.7], [0, 5.2, -2.6], [0, 1.4, 5.2], [-20, 1, 30], [1.0, 1.1, 1.2], [-0.9, 0.9, 3.0], [18, 2, 60]],
+      spotNames: ['巻き上げ機', 'マストの灯', '船のへさき', '沖の波', '浮き玉', '巻いたロープ', '水平線'],
+      /* 魚箱と網より前の甲板だけ。操舵室と魚箱のあいだは、網と魚箱にふさがれて前へ抜けられない（閉じこめられる）ので入れない */
+      walk: { y: 0.66, rects: [[-1.3, 0.0, 1.3, 3.7]], start: [-0.5, 0.95] },
       companion: { stand: { p: [-0.7, 0.66, 2.0], ry: 0.2, pose: 'stand' }, sit: { p: [0.6, 0.66, 1.6], ry: -1.4, pose: 'stand' } },
       amb: { sea: 0.8, engine: 0.4, wind: 0.5 },
       onLight(env) { tint(env); ml.emissiveIntensity = env.lampOn * 3; pl.intensity = env.lampOn * 16; },

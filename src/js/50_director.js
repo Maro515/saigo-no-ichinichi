@@ -44,6 +44,8 @@
     return o;
   }
 
+  SI.ambFor = ambFor;
+
   class App {
     constructor(env, rig, data, q) {
       this.env = env; this.rig = rig; this.data = data; this.q = q;
@@ -56,12 +58,20 @@
       this.titleT = 0; this.hintT = 0;
       this.fast = q.get('fast') ? parseFloat(q.get('fast')) : 0;
       if (this.fast) this.ui.readSpeed = this.fast;
+      /* 一時間を、何分で過ごすか（1〜5）。確認用に ?hour=0.05 のような小さな値も受ける */
+      this.hourMin = q.get('hour') ? Math.max(0.005, parseFloat(q.get('hour'))) : U.clamp(U.store.get('si.hour', 2), 1, 5);
+      this.day = null; this.anchor = null;
+      this.ui.pace(this.hourMin);
       rig.reduced = this.ui.reduced;
       rig.onTap = (x, y) => this.onTap(x, y);
-      rig.onStep = () => this.audio.step();
+      rig.onStep = () => this.audio.step(!!(this.stage && !this.stage.indoor));
       const ui = this.ui;
       ui.onStart = () => this.start(); ui.onAgain = () => this.start(); ui.onHome = () => this.toTitle(); ui.onQuit = () => this.toTitle();
       ui.onRecall = () => this.recall();
+      ui.onUse = () => !!(this.day && this.day.use());
+      ui.onRest = () => { if (this.day) this.day.toggleDoze(); };
+      ui.onPace = (v) => { this.hourMin = v; U.store.set('si.hour', v); ui.pace(v); };
+      ui.onStick = (x, y) => { rig.stick.x = x; rig.stick.y = y; };
       ui.onSound = () => { this.audio.init(); this.audio.setEnabled(!this.audio.enabled); ui.sound(this.audio.enabled); };
       this.toTitle();
       if (q.get('auto')) setTimeout(() => this.start(), 300);
@@ -70,6 +80,8 @@
     /* ---- はじめの画面 ---- */
     toTitle() {
       if (this.token) this.token.cancel();
+      if (this.day) { this.day.stop(); this.day = null; }
+      this.rig.wasdMove = false;
       this.token = null; this.starting = false; this.state = 'title';
       const ui = this.ui, env = this.env;
       ui.clearPlay(); ui.hideEpitaph(); this.clearObjs();
@@ -141,7 +153,7 @@
       const mems = L.pickMemories(life, this.data.memories, r, recentM);
       U.store.set('si.recentMem', recentM.concat(mems.map(m => m.id)).slice(-150));
       const last = L.pickLast(life, this.data.last, r);
-      this.seenMems = []; this.sceneSeed = U.hash(cause.id) % 100000;
+      this.seenMems = []; this.sceneSeed = U.hash(cause.id) % 100000; this.compLook = null;
 
       if (!U.el('title').hidden) await ui.hideTitle(tk);
       ui.hideEpitaph();
@@ -158,26 +170,20 @@
         { text: cause.aware ? '今日が最期の一日になる。それはもう、分かっている。' : '今日が最期の一日になることを、まだ知らない。', gap: true }
       ], tk, { hold: 5200 });
 
-      const n = mems.length;
-      const per = n >= 6 ? [2, 2, n - 4] : (n === 5 ? [1, 2, 2] : (n === 4 ? [1, 1, 2] : [1, 1, Math.max(0, n - 2)]));
-      let mi = 0;
       const skip = !!this.q.get('end');                  // 確認用: 最期の場面から始める
       this.weary = 0;
-      for (let i = 0; i < 3 && !skip; i++) {
-        const b = cause.beats[i];
-        await this.enterScene(b, tk, i === 0);
-        this.weary = cause.aware ? i + 1 : 0; this.fx.weary(this.weary);
-        for (const s of U.sentences(L.resolve(b.text, life))) await ui.narrate(s, tk);
-        ui.clearNarr();
-        for (let k = 0; k < per[i] && mi < n; k++, mi++) await this.memoryPhase(mems[mi], tk, mi === 0);
-        await U.sleep(this.fast ? 200 : 1100, tk);
-        await ui.lids('shut', 800, tk);
-      }
-      if (skip) this.seenMems = mems.slice(0, 4);
-      this.weary = 0;
+      if (this.day) this.day.stop();
       const dying = new SI.Dying(this, cause, life, tk);
-      await this.enterScene(dying.scene(), tk, false, cause.place);
-      await dying.run(last);
+      if (skip) {
+        this.day = null; this.seenMems = mems.slice(0, 4);
+        await this.enterScene(dying.scene(), tk, false, cause.place);
+      } else {
+        /* 朝から最期の時刻まで、時計は止まらずに進む。そのあいだは自由に過ごせる */
+        const day = this.day = new SI.Day(this, cause, life, mems, dying, tk);
+        try { await day.run(); } finally { if (this.token !== tk || tk.aborted) day.stop(); }
+      }
+      this.weary = 0;
+      try { await dying.run(last); } finally { if (this.day) { this.day.stop(); this.day = null; } this.rig.wasdMove = false; }
       await this.epitaph(cause, life, tk);
     }
 
@@ -186,27 +192,58 @@
       const life = this.life, ui = this.ui, rig = this.rig;
       this.clearObjs(); this.usedSpots = [];
       const st = this.setStage(b.stage, b.v, { season: life.season, weather: life.weather, hour: U.timeToHour(b.t), seed: this.sceneSeed });
+      if (st.walk && !st.nav && SI.Nav) st.nav = new SI.Nav(st);                 // 歩ける範囲（人を置く前に調べる）
       const a = (place && b.pos === 'walk' && st.anchors.walkEnd) ? st.anchors.walkEnd : SI.pickAnchor(st, b.pos);
-      rig.setAnchor(a);
-      const bodyKind = a.body || 'stand';
-      const bodyOpt = Object.assign({}, (st.body && st.body[bodyKind]) || {});
-      if (/^lie/.test(bodyKind) && SI.bedDepth && a.p && a.look) { const bd = SI.bedDepth(st, a, this.env); if (bd != null) bodyOpt.bed = bd; }
-      rig.setBody(bodyKind === 'none' ? null : K.body(bodyKind, bodyOpt));
+      rig.setAnchor(a); this.anchor = a;
+      rig.setBody(this.makeBody(st, a));
       rig.enabled = true; rig.rock = st.rock || 0;
-      if (b.with && st.companion) {
-        const cp = st.companion[b.pos] || st.companion[Object.keys(st.companion)[0]];
-        const look = L.companionLook(life, this.r);
-        const pose = look.child && cp.pose === 'seiza' ? 'stand' : cp.pose;
-        const f = K.figure(Object.assign({ pose, seat: cp.seat }, look));
-        K.at(f, cp.p[0], cp.p[1], cp.p[2], cp.ry);
-        st.group.add(f); this.objs.push(f); this.ticks.push((t, dt) => f.userData.tick(t, dt)); this.companion = f;
-      }
+      this.syncCompanion(b);
       this.audio.ambience(ambFor(st, U.timeToHour(b.t), life.season, life.weather));
       this.audio.heart(70, 0, 0); this.audio.breath(14, 0);
       const label = place || st.label;
       await ui.card([{ text: U.timeJa(b.t) }, { text: label, sub: true }], tk, { hold: 1500, step: 450, min: 300, force: true });
       ui.hud(true, b.t, label);
       await ui.lids('open', first ? 2800 : 1400, tk);
+    }
+
+    /* その視点に合う、自分の体 */
+    makeBody(st, a) {
+      const kind = a.body || 'stand';
+      if (kind === 'none') return null;
+      const opt = Object.assign({}, (st.body && st.body[kind]) || {});
+      if (/^lie/.test(kind) && SI.bedDepth && a.p && a.look) { const bd = SI.bedDepth(st, a, this.env); if (bd != null) opt.bed = bd; }
+      return K.body(kind, opt);
+    }
+    /* 人物を場面に出す・片づける（動きの更新も、いっしょに足し引きする） */
+    addFigure(f, group) {
+      const fn = (t, dt) => f.userData.tick(t, dt);
+      f.userData.tickFn = fn; group.add(f); this.objs.push(f); this.ticks.push(fn);
+    }
+    removeFigure(f) {
+      if (f.parent) f.parent.remove(f);
+      let i = this.objs.indexOf(f); if (i >= 0) this.objs.splice(i, 1);
+      i = this.ticks.indexOf(f.userData.tickFn); if (i >= 0) this.ticks.splice(i, 1);
+      K.dispose(f);
+    }
+    /* そばにいる人を、その場面に合わせて置く（いなくなる場面では、片づける） */
+    syncCompanion(b) {
+      const st = this.stage, old = this.companion;
+      if (old) { this.removeFigure(old); this.companion = null; }
+      if (!b.with || !st.companion) return;
+      if (!this.compLook) this.compLook = L.companionLook(this.life, this.r);   // 一日を通して、同じ人
+      const cp = st.companion[b.pos] || st.companion[Object.keys(st.companion)[0]], look = this.compLook;
+      const pose = look.child && cp.pose === 'seiza' ? 'stand' : cp.pose;
+      const f = K.figure(Object.assign({ pose, seat: cp.seat }, look));
+      K.at(f, cp.p[0], cp.p[1], cp.p[2], cp.ry);
+      this.addFigure(f, st.group); this.companion = f;
+    }
+    /* 自由に歩いていた人を、その場に止める（最期の異変が来た瞬間） */
+    seize() {
+      const rig = this.rig;
+      rig.wasdMove = false; rig.stick.x = rig.stick.y = 0; this.ui.stick(false);
+      if (!rig.free) return;
+      const p = rig.pos, yaw = rig.viewYaw(), pitch = U.clamp(rig.basePitch + rig.uPitch, -1.2, 1.2), c = Math.cos(pitch);
+      rig.setAnchor({ p: [p.x, p.y, p.z], look: [p.x - Math.sin(yaw) * c, p.y + Math.sin(pitch), p.z - Math.cos(yaw) * c], lim: { yaw: 150, up: 60, down: 55 }, body: 'stand', ground: rig.groundY });
     }
 
     /* 灯をひとつ置き、見つめられるのを待って、記憶を語る */
@@ -265,11 +302,12 @@
         if (st.lightOffsets) follow.fromArray(U.pick(this.r, st.lightOffsets));
       } else {
         const fwd = rig.cam.getWorldDirection(v2).clone();
-        const cands = (st.spots || []).map(s => new T.Vector3().fromArray(s)).filter(p => rig.canSee(p, -0.1) && p.distanceTo(rig.pos) > 0.7 && !(this.usedSpots || []).some(u => u.distanceTo(p) < 0.4));
+        const cands = (st.spots || []).map((s, i) => { const p = new T.Vector3().fromArray(s); p.idx = i; return p; }).filter(p => rig.canSee(p, -0.1) && p.distanceTo(rig.pos) > 0.7 && !(this.usedSpots || []).some(u => u.distanceTo(p) < 0.4));
         let pick = null;
         if (cands.length) {
-          const scored = cands.map(p => { const ang = fwd.angleTo(v1.copy(p).sub(rig.pos)); return { p, s: Math.abs(ang - 0.7) + this.r() * 0.5 }; }).sort((x, y) => x.s - y.s);
+          const scored = cands.map(p => { const ang = fwd.angleTo(v1.copy(p).sub(rig.pos)); return { p, s: Math.abs(ang - 0.7) + this.r() * 0.5 + (rig.free ? p.distanceTo(rig.pos) * 0.04 : 0) }; }).sort((x, y) => x.s - y.s);
           pick = scored[0].p;
+          if (st.spotNames) light.userData.name = st.spotNames[pick.idx] || null;
         } else {
           const side = this.r() < 0.5 ? -1 : 1;
           const right = new T.Vector3(Math.cos(rig.baseYaw), 0, -Math.sin(rig.baseYaw));
@@ -281,7 +319,7 @@
       }
       light.userData.baseY = light.position.y;
       env.scene.add(light);
-      const act = this.active = { light, follow, gaze: 0, done: false, resolve: null, t: 0 };
+      const act = this.active = { light, follow, gaze: 0, done: false, resolve: null, t: 0, name: light.userData.name || null };
       this.updateFollow();
       return act;
     }
@@ -301,7 +339,8 @@
         v1.copy(a.light.position).project(this.env.camera);
         if (v1.z < 1 && Math.hypot(v1.x - x, (v1.y - y) * (window.innerHeight / window.innerWidth)) < 0.17) { this.trigger(); return; }
       }
-      this.ui.advance();
+      if (this.ui.advance()) return;
+      if (this.day) this.day.use();
     }
 
     async soma(tk, speed) {
@@ -358,6 +397,8 @@
       const env = this.env, rig = this.rig, t = env.time;
       this.audio.update(dt);
       for (const f of this.ticks) f(t, dt);
+      if (this.day) this.day.update(dt);
+      env.walker = rig.pos;                       // 場所の側が、本人の位置を見られるように（通りの車は、人の手前で止まる）
       if (this.state === 'title') { this.titleT += dt; rig.drift = Math.sin(this.titleT * 0.08) * 0.2; } else rig.drift = 0;
       const a = this.active;
       if (a) {
@@ -370,7 +411,7 @@
           a.light.userData.setGaze(a.gaze);
           this.ui.reticle(true, a.gaze);
           if (a.gaze >= 1) this.trigger();
-          if (a.t > 16 && !a.hinted) { a.hinted = true; this.ui.hint('見つからないときは「灯を見る」を押す。', 7000); }
+          if (a.t > 16 && !a.hinted && !this.day) { a.hinted = true; this.ui.hint('見つからないときは「灯を見る」を押す。', 7000); }
         }
       }
       for (let i = this.fading.length - 1; i >= 0; i--) {

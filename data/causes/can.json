@@ -447,6 +447,8 @@
   "season": "winter",
   "weather": "snow",
   "aware": true,
+  "mute": true,
+  "bound": true,
   "beats": [
    {
     "t": "08:30",
@@ -501,6 +503,7 @@
   "season": "any",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "20:00",
@@ -1255,6 +1258,7 @@
   "season": "any",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "06:30",
@@ -1647,7 +1651,8 @@
     "stage": "washitsu",
     "pos": "sit",
     "with": true,
-    "text": "縁側の日だまりに、{大切な人}に支えられて座る。棚の盆栽の松は、もう鋏を入れていない。新芽が、好きなほうへ伸びている。"
+    "text": "縁側の日だまりに、{大切な人}に支えられて座る。棚の盆栽の松は、もう鋏を入れていない。新芽が、好きなほうへ伸びている。",
+    "bound": true
    },
    {
     "t": "13:30",
@@ -1848,6 +1853,7 @@
   "season": "any",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "beats": [
    {
     "t": "07:40",
@@ -2117,6 +2123,7 @@
   "season": "any",
   "weather": "any",
   "aware": true,
+  "mute": true,
   "job": "student",
   "beats": [
    {

@@ -72,7 +72,55 @@
       });
     }
     if (q.get('fx')) { SI.debugFx = q.get('fx'); }
+    if (q.get('top')) topView(env, st, q);
     SI.debugTicks = ticks;
+  }
+
+  /* 場所を真上から見て、歩ける範囲を重ねる（?stage=living&top=1、&span=12 &cx=0 &cz=0 &cut=2.05） */
+  function topView(env, st, q) {
+    const T = window.THREE, w = st.walk || null;
+    const nav = SI.Nav ? new SI.Nav(st) : null;
+    let bx0 = -5, bz0 = -5, bx1 = 5, bz1 = 5;
+    if (w && w.rects && w.rects.length) { bx0 = bz0 = Infinity; bx1 = bz1 = -Infinity; for (const r of w.rects) { bx0 = Math.min(bx0, r[0]); bz0 = Math.min(bz0, r[1]); bx1 = Math.max(bx1, r[2]); bz1 = Math.max(bz1, r[3]); } }
+    else { const ps = Object.values(st.anchors).map(a => a.p || a.path[0]); bx0 = Math.min(...ps.map(p => p[0])) - 4; bx1 = Math.max(...ps.map(p => p[0])) + 4; bz0 = Math.min(...ps.map(p => p[2])) - 4; bz1 = Math.max(...ps.map(p => p[2])) + 4; }
+    const num = (k, d) => q.get(k) != null ? parseFloat(q.get(k)) : d;
+    const cx = num('cx', (bx0 + bx1) / 2), cz = num('cz', (bz0 + bz1) / 2);
+    const W = window.innerWidth, H = window.innerHeight, asp = W / H;
+    const spanX = num('span', Math.max((bx1 - bx0) + 2, ((bz1 - bz0) + 2) * asp)), spanZ = spanX / asp;
+    const y0 = w ? (w.y || 0) : 0;
+    const cam = new T.OrthographicCamera(-spanX / 2, spanX / 2, spanZ / 2, -spanZ / 2, 0.01, 300);
+    cam.position.set(cx, y0 + num('cut', st.indoor ? 2.05 : 60), cz); cam.rotation.set(-Math.PI / 2, 0, 0); cam.updateProjectionMatrix();
+    env.scene.fog.near = 9000; env.scene.fog.far = 9999;
+    env.render = () => { env.sky.visible = false; env.renderer.render(env.scene, cam); };
+    for (const id of ['hud', 'reticle', 'wash', 'lidTop', 'lidBot']) { const e = U.el(id); if (e) e.style.display = 'none'; }
+    const cv = document.createElement('canvas'), dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = W * dpr; cv.height = H * dpr; cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:50;pointer-events:none';
+    document.body.appendChild(cv);
+    const g = cv.getContext('2d'); g.scale(dpr, dpr);
+    const X = (x) => (x - cx) / spanX * W + W / 2, Z = (z) => (z - cz) / spanZ * H + H / 2;
+    /* マス目（1 m）と目盛り */
+    g.font = '11px monospace'; g.textBaseline = 'top';
+    for (let x = Math.ceil(cx - spanX / 2); x <= cx + spanX / 2; x++) { g.strokeStyle = x === 0 ? 'rgba(255,80,80,0.9)' : (x % 5 === 0 ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.16)'); g.beginPath(); g.moveTo(X(x), 0); g.lineTo(X(x), H); g.stroke(); if (spanX < 26 || x % 5 === 0) { g.fillStyle = '#ffd'; g.fillText(String(x), X(x) + 2, 2); } }
+    for (let z = Math.ceil(cz - spanZ / 2); z <= cz + spanZ / 2; z++) { g.strokeStyle = z === 0 ? 'rgba(80,140,255,0.9)' : (z % 5 === 0 ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.16)'); g.beginPath(); g.moveTo(0, Z(z)); g.lineTo(W, Z(z)); g.stroke(); if (spanX < 26 || z % 5 === 0) { g.fillStyle = '#ffd'; g.fillText('z' + z, 2, Z(z) + 2); } }
+    /* 歩けるマス */
+    if (nav && nav.ok) {
+      const c = nav.cell, pw = Math.max(1.5, c / spanX * W * 0.55);
+      g.fillStyle = 'rgba(70,255,120,0.75)';
+      for (let iz = 0; iz < nav.nz; iz++) for (let ix = 0; ix < nav.nx; ix++) if (nav.grid[iz * nav.nx + ix]) g.fillRect(X(nav.x0 + (ix + 0.5) * c) - pw / 2, Z(nav.z0 + (iz + 0.5) * c) - pw / 2, pw, pw);
+      g.strokeStyle = 'rgba(70,255,120,0.9)'; g.lineWidth = 1.5;
+      for (const r of w.rects) g.strokeRect(X(r[0]), Z(r[1]), X(r[2]) - X(r[0]), Z(r[3]) - Z(r[1]));
+      g.strokeStyle = 'rgba(255,90,90,0.9)';
+      for (const r of (w.holes || [])) g.strokeRect(X(r[0]), Z(r[1]), X(r[2]) - X(r[0]), Z(r[3]) - Z(r[1]));
+    }
+    const mark = (x, z, col, label) => { g.fillStyle = col; g.beginPath(); g.arc(X(x), Z(z), 5, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#000'; g.lineWidth = 1; g.stroke(); g.font = '12px sans-serif'; g.lineWidth = 3; g.strokeText(label, X(x) + 7, Z(z) - 7); g.fillStyle = '#fff'; g.fillText(label, X(x) + 7, Z(z) - 7); };
+    for (const k in st.anchors) { const a = st.anchors[k], p = a.p || a.path[0], l = a.look || a.path[1]; mark(p[0], p[2], '#4af', '視点:' + k); g.strokeStyle = '#4af'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(p[0]), Z(p[2])); const d = Math.hypot(l[0] - p[0], l[2] - p[2]) || 1; g.lineTo(X(p[0] + (l[0] - p[0]) / d * 0.6), Z(p[2] + (l[2] - p[2]) / d * 0.6)); g.stroke(); }
+    (st.spots || []).forEach((s, i) => mark(s[0], s[2], '#fc3', (i + 1) + ((st.spotNames || [])[i] ? ' ' + st.spotNames[i] : '')));
+    for (const k in (st.companion || {})) { const c = st.companion[k]; mark(c.p[0], c.p[2], '#f6a', '連れ:' + k); }
+    (st.folk || []).forEach((f) => { const p = new T.Vector3(); f.f.getWorldPosition(p); mark(p.x, p.z, '#f55', '人:' + f.role); });
+    (st.meet || []).forEach((m, i) => mark(m.p[0], m.p[2], '#c7f', '来る人' + (i + 1)));
+    if (st.staff) mark(st.staff.p[0], st.staff.p[2], '#c7f', '職員');
+    if (w && w.start) mark(w.start[0], w.start[1], '#fff', '立つ');
+    document.title = 'top ' + (nav && nav.ok ? nav.count() : 0);
   }
 
   /* 試験用（?selftest=ends&from=0&n=540）: 最期の場面を、待ち時間なしで端から通す。つまずいた件を画面とコンソールに出す */
@@ -85,6 +133,7 @@
     if (app.token) app.token.cancel();
     U.el('title').hidden = true; app.state = 'play';
     const fail = [], modes = {}; let ok = 0, floats = 0;
+    const whole = q.get('selftest') === 'day', stat = { talk: 0, mem: 0, rise: 0, sit: 0, guest: 0, skip: 0, enter: 0, beat: 0, walk: 0, bed: 0, note: 0 };
     const realFloat = app.ui.float.bind(app.ui); app.ui.float = (...a) => { floats++; realFloat(a[0], a[1], a[2], a[3], 30); };
     const t0 = performance.now();
     for (let i = from; i < Math.min(all.length, from + n); i++) {
@@ -93,17 +142,28 @@
         app.cause = c; app.r = U.rng(U.hash(c.id)); app.life = L.make(c, app.r);
         app.seenMems = app.data.memories.slice(0, 3); app.sceneSeed = U.hash(c.id) % 100000;
         app.fx.reset(); app.clearObjs(); app.ui.clearPlay();
+        app.compLook = null;
         const d = new SI.Dying(app, c, app.life, tk);
         modes[d.mode] = (modes[d.mode] || 0) + 1;
-        await app.enterScene(d.scene(), tk, false, c.place);
+        if (whole) {
+          /* 朝から最期の時刻までを、時計を早回しにして通す。そのあいだ、話す・思い出す・立つ・座るを手あたりしだいに試す */
+          app.seenMems = [];
+          const mems = L.pickMemories(app.life, app.data.memories, app.r, []);
+          const day = app.day = new SI.Day(app, c, app.life, mems, d, tk);
+          day.stat = stat;
+          await day.run();
+          if (day.m < day.tEnd - 0.5) throw new Error('時刻が最期まで進んでいない ' + day.m + ' / ' + day.tEnd);
+        } else await app.enterScene(d.scene(), tk, false, c.place);
         app.update(0.05); app.rig.update(0.05); app.env.update(0.05, app.rig.root.position);
         await d.run('ためしの一言。');
         app.update(0.05); app.rig.update(0.05); app.env.update(0.05, app.rig.root.position);
+        if (app.day) { app.day.stop(); app.day = null; }
+        if (app.rig.free) throw new Error('最期のあとも、歩ける状態のまま');
         ok++;
-      } catch (e) { fail.push(c.id + ' ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); if (window.console) console.error('selftest ' + c.id, e); }
-      if (i % 10 === 0) { out.textContent = `最期の場面の通し試験 ${i - from + 1} / ${Math.min(n, all.length - from)} …`; await U.wait(0); }
+      } catch (e) { fail.push(c.id + ' ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); if (window.console) console.error('selftest ' + c.id, e); if (app.day) { app.day.stop(); app.day = null; } }
+      if (i % 10 === 0) { out.textContent = `${whole ? '一日の通し試験' : '最期の場面の通し試験'} ${i - from + 1} / ${Math.min(n, all.length - from)} …`; await U.wait(0); }
     }
-    out.textContent = `最期の場面の通し試験 完了\n件数 ${ok + fail.length}（成功 ${ok} / 失敗 ${fail.length}）\n運び方 ${JSON.stringify(modes)}\n出した短い言葉 ${floats}\n時間 ${((performance.now() - t0) / 1000).toFixed(1)} 秒\n\n` + fail.join('\n');
+    out.textContent = `${whole ? '一日の通し試験' : '最期の場面の通し試験'} 完了\n件数 ${ok + fail.length}（成功 ${ok} / 失敗 ${fail.length}）\n運び方 ${JSON.stringify(modes)}\n出した短い言葉 ${floats}\n${whole ? '一日のあいだにしたこと ' + JSON.stringify(stat) + '\n' : ''}時間 ${((performance.now() - t0) / 1000).toFixed(1)} 秒\n\n` + fail.join('\n');
     document.title = `selftest ${ok}/${ok + fail.length}`;
   }
 

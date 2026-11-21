@@ -31,12 +31,14 @@
       g.add(K.box(2.5, 0.12, 66.5, swM, sx * 4.75, 0, -16.75)); g.add(K.box(2.5, 0.12, 51.5, swM, sx * 4.75, 0, 49.25));
       g.add(K.box(60, 0.12, 2.5, swM, sx * 36, 0, 15.25)); g.add(K.box(60, 0.12, 2.5, swM, sx * 36, 0, 24.75));
     }
-    /* 建物 */
+    /* 建物。blds は足もとの範囲（歩ける範囲から除くために控える） */
+    const blds = [];
     const mkRow = (x, z0, z1, ry) => {
       let z = z0;
       while (z < z1 - 6) {
         const w = 8 + rng() * 6, h = 6 + rng() * (rng() < 0.3 ? 26 : 10);
         const b = K.building(w, h, 9, U.pick(rng, BCOL), c.seed + Math.floor(z * 3 + x)); K.at(b, x, 0, z + w / 2, ry); g.add(b); lamps.push(b);
+        blds.push([x - 4.6, z, x + 4.6, z + w]);
         const aw = K.box(0.9, 0.1, w * 0.7, K.m(U.pick(rng, ['#7a2f2a', '#2f4a3f', '#3d4a6a', '#c9a13a', '#e2dfd6'])), x - Math.sign(x) * 4.9, 2.7, z + w / 2); g.add(aw);
         const gl = K.box(0.06, 2.2, w * 0.7, K.m('#5a6a72', { rough: 0.2, emissive: '#ffe2b0', ei: 0, nocache: true }), x - Math.sign(x) * 4.52, 0.3, z + w / 2, { noShadow: true }); g.add(gl);
         gl.userData.setLamp = (v) => { gl.material.emissiveIntensity = v * 0.8; }; lamps.push(gl);
@@ -45,6 +47,7 @@
     };
     mkRow(-10.6, -52, 14, PI / 2); mkRow(10.6, -52, 14, PI / 2); mkRow(-10.6, 26, 76, PI / 2); mkRow(10.6, 26, 76, PI / 2);
     for (let i = 0; i < 5; i++) for (const sz of [-1, 1]) { const b = K.building(10, 8 + rng() * 14, 9, U.pick(rng, BCOL), c.seed + 90 + i); K.at(b, (i < 2 ? -1 : 1) * (22 + (i % 3) * 13), 0, 20 + sz * 10.6); g.add(b); lamps.push(b); }
+    for (let i = 0; i < 5; i++) for (const sz of [-1, 1]) { const bx = (i < 2 ? -1 : 1) * (22 + (i % 3) * 13), bz = 20 + sz * 10.6; blds.push([bx - 5.1, bz - 4.6, bx + 5.1, bz + 4.6]); }
     /* 電柱、街灯、街路樹、ガードレール、自販機、ポスト、自転車 */
     for (let i = 0; i < 5; i++) { const p = K.pole(8.5); K.at(p, -6.0, 0, -44 + i * 14); g.add(p); if (i) g.add(K.wires([-6.0, 7.8, -44 + (i - 1) * 14], [-6.0, 7.8, -44 + i * 14], 3, 0.5)); }
     for (let i = 0; i < 6; i++) { const l = K.streetLamp(5.5); K.at(l, 3.8, 0, -40 + i * 20 + (i > 2 ? 12 : 0), PI); g.add(l); lamps.push(l); }
@@ -62,6 +65,7 @@
     const ccol = ['#e6e8ea', '#2f3b55', '#8f9498', '#b03a2e', '#3a3b40', '#d9d2c0', '#5f7a8c'];
     const addCar = (axis, dir, lat, pos, kind) => {
       const m = K.car(U.pick(rng, ccol), kind); g.add(m); lamps.push(m);
+      m.userData.noNav = true;                      // 走っている車は、歩ける範囲の調べから外す
       const o = { m, axis, dir, lat, pos, v: 8, kind, max: 7.5 + rng() * 3 };
       cars.push(o); return o;
     };
@@ -88,6 +92,26 @@
       },
       body: { stand: { sleeve: '#5f6672', shoe: '#2f2f33' }, sit: { sleeve: '#5f6672', legs: '#3d4352' } },
       spots: [[-3.9, 2.7, 23.9], [-5.6, 1.3, 10.5], [-3.85, 3.6, 10.6], [-9.5, 3.0, 8], [3.8, 5.3, 12], [0, 6, 46], [-5.7, 1.2, 4.5]],
+      spotNames: ['歩行者の信号', '赤いポスト', 'いちょう並木', '店先の日よけ', '向かいのビル', '通りの先の山なみ', '自動販売機'],
+      /* 歩道と横断歩道だけ。車道には出ない。建物（大きな箱）は自動判定で拾えないので、足もとを除く */
+      walk: {
+        y: 0.12,
+        rects: [
+          [-6.0, -34, -3.5, 16.5], [-6.0, 23.5, -3.5, 40], [3.5, -34, 6.0, 16.5], [3.5, 23.5, 6.0, 40],
+          [-24, 14, -6.0, 16.5], [-24, 23.5, -6.0, 26], [6.0, 14, 24, 16.5], [6.0, 23.5, 24, 26],
+          [-5.95, 16.5, -3.55, 23.5, 0.03], [3.55, 16.5, 5.95, 23.5, 0.03], [-3.5, 13.8, 3.5, 16.2, 0.03]
+        ],
+        holes: blds,
+        /* 歩行者の信号が赤のあいだは、横断歩道へ踏み出せない（車は信号どおりに走っている） */
+        gate(x, z) {
+          const mainGo = phase < 11, crossGo = phase >= 13 && phase < 22;
+          if (z > 16.5 && z < 23.5 && Math.abs(Math.abs(x) - 4.75) < 1.25) return mainGo;       // 交わる道を渡る
+          if (Math.abs(x) < 3.5 && z > 13.8 && z < 16.2) return crossGo;                        // 本通りを渡る
+          return true;
+        }
+      },
+      folk: peds.filter(f => !f.userData.ped).map(f => ({ f, role: 'passerby' })),      // 角で信号を待っている 2 人
+      meet: [{ p: [-5.2, 0.12, 24.7], ry: PI }, { p: [-5.4, 0.12, 12.4], ry: 2.2 }],
       companion: { stand: { p: [-5.55, 0.12, 15.3], ry: 0.3, pose: 'stand' }, walk: { p: [-5.5, 0.12, 13.5], ry: 0, pose: 'stand' } },
       amb: { traffic: 1, crowd: 0.4 },
       onLight: S.lampSetter(lamps),
@@ -104,6 +128,12 @@
           const dist = (s - o.pos) * o.dir;
           if (!go && dist > 0 && dist < 22) target = Math.min(target, Math.max(0, (dist - 1.2) * 1.1));
           for (const q of cars) if (q !== o && q.axis === o.axis && q.dir === o.dir) { const dd = (q.pos - o.pos) * o.dir; if (dd > 0 && dd < 16) target = Math.min(target, Math.max(0, (dd - 7.5) * 1.0)); }
+          /* 歩いている本人が、行く手の横断歩道にいれば、手前で止まる */
+          const wk = env.walker;
+          if (wk) {
+            const dd = ((o.axis === 'z' ? wk.z : wk.x) - o.pos) * o.dir;
+            if (Math.abs((o.axis === 'z' ? wk.x : wk.z) - o.lat) < 2.3 && dd > 0 && dd < 18) target = Math.min(target, Math.max(0, (dd - 5.5) * 1.0));
+          }
           o.v = U.damp(o.v, target, target < o.v ? 3 : 0.9, dt);
           o.pos += o.v * o.dir * dt;
           if (o.pos * o.dir > 66) o.pos = -66 * o.dir;
@@ -192,6 +222,14 @@
       },
       body: { sit: { sleeve: '#7f8a7a', legs: '#4c4f58' }, stand: { sleeve: '#7f8a7a', shoe: '#e6e8ea' } },
       spots: [[-15, 1.2, 6], [4, 9.2, 35], [3, 1.4, 24.6], [-9, 1.1, -6], [-17, 2.1, 14], [8, 4.5, -11], [4.5, 0.7, -4.2], [-11, 4.2, -11]],
+      spotNames: ['ぶらんこ', '校舎の時計', 'サッカーゴール', '水のみ場', 'すべり台', '桜並木', 'ベンチ', '桜の枝'],
+      /* 植えこみの内側から、校舎の手前まで。細い柱だけの遊具とバックネットは自動判定で拾えないので除く */
+      walk: {
+        y: 0, rects: [[-21, -8.4, 24, 28]],
+        holes: [[-14.1, 20.9, -11.8, 23.2]].concat(S.slantHoles(-15, 6, 0.4, 3.3, 1.9), S.slantHoles(-17.49, 14.72, -0.6, 1.0, 5.05), S.slantHoles(22, 3, -0.8, 8.2, 0.3))
+      },
+      folk: people.map((f, i) => ({ f, role: i < 4 ? 'child' : 'parkgoer' })),
+      meet: [{ p: [-2.0, 0, 0.5], ry: 3.0 }, { p: [5.0, 0, 1.5], ry: -2.6 }],
       companion: { sit: { p: [-4.35, 0, -3.62], ry: 0.15, pose: 'sit', seat: 0.42 }, stand: { p: [0.3, 0, 0.6], ry: 0.6, pose: 'stand' }, walk: { p: [-17, 0, -4.6], ry: 1.5, pose: 'stand' } },
       petalBox: [[-22, 0, -14], [22, 7, 6]],
       amb: { nature: 1, crowd: 0.25 },
@@ -278,6 +316,9 @@
       },
       body: { sit: { sleeve: '#5f6672', legs: '#3d4352' }, stand: { sleeve: '#5f6672' } },
       spots: [[hx - 0.05, 1.45, 1.6], [0, 1.78, 1.3], [hx - 0.3, 0.75, 4.2], [0, 1.25, L / 2 - 0.2], [hx - 0.05, 1.3, -4.5], [-0.78, 1.67, 3.4], [hx - 0.05, 1.98, 2.4]],
+      spotNames: ['流れる景色', '中づり広告', '乗り降りのドア', '隣の車両への扉', 'ドアの窓', 'つり革', '窓の上の広告'],
+      walk: { y: 0, rects: [[-hx, -L / 2 + 0.06, hx, L / 2 - 0.06]], start: [-0.45, 1.2] },
+      folk: people.map(f => ({ f, role: 'passenger' })),
       companion: { sit: { p: [-hx + 0.32, 0, 0.5], ry: PI / 2, pose: 'sit', seat: 0.4 }, stand: { p: [0.75, 0, -2.5], ry: -2.4, pose: 'stand' } },
       weatherBox: [[hx + 0.4, -1, -12], [hx + 10, 6, 12]],
       amb: { train: 1 },
@@ -380,6 +421,7 @@
       anchors: { sit: { p: [eyeX, 1.2, -0.08], look: [eyeX * 0.6, 1.12, 30], lim: { yaw: 130, up: 40, down: 45 }, body: passenger ? 'sit' : 'car' } },
       body: { car: { sleeve: '#5f6672' }, sit: { sleeve: '#5f6672', legs: '#3d4352' } },
       spots: [[0, 1.3, 0.62], [passenger ? -0.2 : 0.4, 1.05, 1.05], [passenger ? dx : 0.36, 0.75, 0.05], [-1.0, 1.4, 26], [2.6, 1.6, 14], [0.9, 1.1, 0.98]],
+      spotNames: ['ミラーのお守り', 'ダッシュボード', passenger ? '運転席' : '助手席', '行く手の道', '道ばたの景色', 'サイドミラー'],
       companion: passenger ? { sit: { p: [dx, 0.02, -0.5], ry: 0, pose: 'sit', seat: 0.33 } } : { sit: { p: [0.36, 0.02, -0.14], ry: 0, pose: 'sit', seat: 0.33 } },
       amb: { engine: v === 'highway' ? 1 : 0.75, pass: v === 'city' ? 0.5 : 0.15 },
       onLight(env) { for (const l of lamps) if (l.userData.setLamp) l.userData.setLamp(Math.max(env.lampOn, wet ? 0.6 : 0)); hl.intensity = env.lampOn * 260; instr.material.emissiveIntensity = 0.12 + env.lampOn * 0.7; },

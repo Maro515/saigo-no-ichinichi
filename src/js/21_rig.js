@@ -25,6 +25,8 @@
       this.t = 0; this.stepPhase = 0;
       this.onTap = null; this.onStep = null;
       this.keys = {};
+      /* 自由に歩くとき（free があるあいだ）。nav 歩ける範囲 / speed 歩く速さ / eye 目の高さ / locked 足を止めておく */
+      this.free = null; this.stick = { x: 0, y: 0 }; this.vx = 0; this.vz = 0; this._mv = { x: 0, z: 0 };
       this._bindInput(dom);
     }
 
@@ -82,11 +84,30 @@
         this.baseYaw = Math.atan2(-dd.x, -dd.z); this.basePitch = 0;
       }
       this.groundY = a.ground != null ? a.ground : 0;
+      this.free = null; this.vx = 0; this.vz = 0;
       this.fallAmt = 0; this.fallT = 0; this.fallMode = a.body || 'stand';
       this.calm(true);
       this.eyeY = this.pos.y;
       this.apply(0);
     }
+
+    /* 自由に歩きはじめる。いまの向きを保ったまま、首の回る範囲の限りをはずす */
+    setFree(nav, o) {
+      this.baseYaw += this.uYaw; this.uYaw = this.tYaw = 0;
+      const pitch = this.basePitch + this.uPitch; this.basePitch = 0; this.uPitch = this.tPitch = U.clamp(pitch, -1.2, 1.2);
+      this.lim = { yaw: 1e7, up: 72, down: 72 };
+      this.path = null; this.walking = false;
+      this.free = Object.assign({ nav, speed: 1.2, eye: 1.5, locked: false }, o || {});
+      this.fallMode = 'stand'; this.vx = 0; this.vz = 0;
+    }
+    /* 歩こうとしている強さ（0〜1）。座っているときに、立ち上がる合図にも使う */
+    intent() {
+      const k = this.keys;
+      let x = this.stick.x + (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0), y = this.stick.y + (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
+      return Math.min(1, Math.hypot(x, y));
+    }
+    /* いま見ている向き（水平）と、目の位置 */
+    viewYaw() { return this.baseYaw + this.uYaw; }
 
     setBody(group) {
       while (this.bodyHolder.children.length) { const old = this.bodyHolder.children[0]; this.bodyHolder.remove(old); SI.Kit.dispose(old); }
@@ -132,12 +153,13 @@
     update(dt) {
       this.t += dt;
       if (this.enabled) {
-        const k = this.keys, ks = 1.3 * dt;
-        if (k.ArrowLeft || k.KeyA) this.tYaw += ks;
-        if (k.ArrowRight || k.KeyD) this.tYaw -= ks;
-        if (k.ArrowUp || k.KeyW) this.tPitch += ks * 0.8;
-        if (k.ArrowDown || k.KeyS) this.tPitch -= ks * 0.8;
-        if (k.ArrowLeft || k.ArrowRight || k.ArrowUp || k.ArrowDown || k.KeyA || k.KeyD || k.KeyW || k.KeyS) this._clamp();
+        const k = this.keys, ks = 1.3 * dt, wasd = !this.wasdMove;       // 歩ける一日のあいだは、W A S D は歩くのに使う
+        const l = k.ArrowLeft || (wasd && k.KeyA), r = k.ArrowRight || (wasd && k.KeyD), u = k.ArrowUp || (wasd && k.KeyW), d = k.ArrowDown || (wasd && k.KeyS);
+        if (l) this.tYaw += ks;
+        if (r) this.tYaw -= ks;
+        if (u) this.tPitch += ks * 0.8;
+        if (d) this.tPitch -= ks * 0.8;
+        if (l || r || u || d) this._clamp();
       }
       this.uYaw = U.damp(this.uYaw, this.tYaw, 9, dt);
       this.uPitch = U.damp(this.uPitch, this.tPitch, 9, dt);
@@ -148,9 +170,40 @@
       for (const k of ['p', 'r', 'y']) this.head[k] = U.damp(this.head[k], this.headT[k], 0.9, dt);
       this.sink = U.damp(this.sink, this.sinkT, 1.1, dt);
 
+      /* 自由に歩く */
+      const fr = this.free;
+      if (fr) {
+        let ix = 0, iy = 0;
+        if (this.enabled && !fr.locked) {
+          const k = this.keys;
+          ix = this.stick.x + (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0); iy = this.stick.y + (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
+          const len = Math.hypot(ix, iy); if (len > 1) { ix /= len; iy /= len; }
+        }
+        const yaw = this.baseYaw + this.uYaw, sp = fr.speed * (iy < 0 ? 0.6 : 1);
+        const tx = (-Math.sin(yaw) * iy + Math.cos(yaw) * ix) * sp, tz = (-Math.cos(yaw) * iy - Math.sin(yaw) * ix) * sp;
+        this.vx = U.damp(this.vx, tx, 7, dt); this.vz = U.damp(this.vz, tz, 7, dt);
+        let dist = 0;
+        if (dt > 0 && (Math.abs(this.vx) > 0.004 || Math.abs(this.vz) > 0.004)) {
+          const o = this._mv;
+          fr.nav.move(this.pos.x, this.pos.z, this.vx * dt, this.vz * dt, o);
+          dist = Math.hypot(o.x - this.pos.x, o.z - this.pos.z);
+          this.pos.x = o.x; this.pos.z = o.z;
+        }
+        const gy = fr.nav.baseY(this.pos.x, this.pos.z);
+        this.groundY = gy;
+        if (!fr.glide) this.pos.y = U.damp(this.pos.y, gy + fr.eye, 9, dt);
+        const amt = dt > 0 ? U.clamp(dist / dt / Math.max(0.2, fr.speed), 0, 1) : 0;
+        this.walkAmt = U.damp(this.walkAmt, amt, 6, dt);
+        const prev = this.stepPhase;
+        this.stepPhase += dist / 0.66;
+        if (Math.floor(prev) !== Math.floor(this.stepPhase) && this.onStep) this.onStep();
+        /* 体は、見ているほうへ遅れてついてくる */
+        const fold = (amt > 0.15 || Math.abs(this.uYaw) > 0.9) ? this.uYaw * (1 - Math.exp(-3.2 * dt)) : 0;
+        if (fold) { this.baseYaw += fold; this.uYaw -= fold; this.tYaw -= fold; }
+      }
       /* 歩く */
-      this.walkAmt = U.damp(this.walkAmt, this.walking ? 1 : 0, 2.5, dt);
-      if (this.path && this.walkAmt > 0.01) {
+      if (!fr) this.walkAmt = U.damp(this.walkAmt, this.walking ? 1 : 0, 2.5, dt);
+      if (!fr && this.path && this.walkAmt > 0.01) {
         let step = this.speed * this.walkAmt * dt;
         while (step > 0 && this.seg < this.path.length - 1) {
           const a = this.path[this.seg], b = this.path[this.seg + 1], len = a.distanceTo(b);
