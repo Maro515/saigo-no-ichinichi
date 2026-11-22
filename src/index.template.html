@@ -48,7 +48,7 @@
 <main id="title" class="title">
   <div class="title-head">
     <h1 class="title-name">最期の一日</h1>
-    <p class="title-lead">ある人の、最後の一日を見届けます。<br>それは事故か、事件か、突然の病か。<br>誰の、どんな一日になるかは、選べません。</p>
+    <p class="title-lead">ある人の、最後の一日を見届けます。<br>それは事故か、事件か、突然の病か。<br>なかには、あとから意味がわかる一日もあります。<br>誰の、どんな一日になるかは、選べません。</p>
   </div>
   <div class="title-foot">
     <p id="titleCount" class="title-count"></p>
@@ -93,6 +93,12 @@
     <p id="epiCause" class="epi-cause"></p>
   </div>
   <div class="epi-side">
+    <div id="epiTwist" class="epi-twist" hidden>
+      <p class="epi-twist-label">この一日の、違和感</p>
+      <p id="epiTwistQ" class="epi-twist-q"></p>
+      <button id="btnTwist" class="btn btn-quiet epi-twist-btn" type="button" aria-expanded="false" aria-controls="epiTwistA">意味を知る</button>
+      <p id="epiTwistA" class="epi-twist-a" hidden></p>
+    </div>
     <p id="epiNote" class="epi-note"></p>
     <p id="epiMem" class="epi-mem"></p>
     <div class="epi-actions">

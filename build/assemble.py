@@ -34,7 +34,7 @@ def main():
     if os.path.exists(focus_path):
         focus = json.load(open(focus_path, encoding='utf-8'))
         cats, ill = set(focus.get('cats', [])), set(focus.get('ill', []))
-        causes = [c for c in causes if (c['cat'] in cats and not c.get('aware')) or c['id'] in ill]
+        causes = [c for c in causes if (c['cat'] in cats and not c.get('aware')) or c['id'] in ill or c.get('twist')]      # 意味がわかると怖い話（twist）は、すべて出す
     memories = []
     for p in sorted(glob.glob(os.path.join(ROOT, 'data', 'life', 'mem_*.json'))):
         memories += json.load(open(p, encoding='utf-8'))

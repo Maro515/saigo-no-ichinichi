@@ -379,7 +379,7 @@
       this.state = 'epitaph'; this.starting = false;
       ui.clearPlay(); ui.cinema(false); this.clearObjs();
       this.audio.ambience({});
-      await ui.showEpitaph({ name: life.name, ageJa: life.ageJa, jobJa: life.jobJa, dateJa: life.dateJa, timeJa: U.timeJa(cause.end.t), place: cause.place, cause: cause.name, note: cause.note, memCount: this.seenMems.length });
+      await ui.showEpitaph({ name: life.name, ageJa: life.ageJa, jobJa: life.jobJa, dateJa: life.dateJa, timeJa: U.timeJa(cause.end.t), place: cause.place, cause: cause.name, note: cause.note, memCount: this.seenMems.length, twist: cause.twist });
     }
 
     /* 画面の確認用（?show=epi / ledger / mem / narr） */
@@ -387,7 +387,7 @@
       const ui = this.ui, c = this.data.causes.find(x => x.id === this.q.get('id')) || this.data.causes[0];
       const life = L.make(c, U.rng(5));
       U.el('title').hidden = true;
-      if (kind === 'epi') ui.showEpitaph({ name: life.name, ageJa: life.ageJa, jobJa: life.jobJa, dateJa: life.dateJa, timeJa: U.timeJa(c.end.t), place: c.place, cause: c.name, note: c.note, memCount: 6 });
+      if (kind === 'epi') ui.showEpitaph({ name: life.name, ageJa: life.ageJa, jobJa: life.jobJa, dateJa: life.dateJa, timeJa: U.timeJa(c.end.t), place: c.place, cause: c.name, note: c.note, memCount: 6, twist: c.twist });
       else if (kind === 'ledger') {
         const rows = this.data.causes.slice(0, 9).map((x, i) => ({ id: x.id, name: ['和子', '茂', '陽菜', '健一', '節子', '蓮', '美穂', '正', '由美子'][i], age: [78, 91, 17, 66, 84, 12, 49, 97, 71][i], cause: x.name, place: x.place, day: '2026.11.' + String(20 - i).padStart(2, '0') }));
         ui.openLedger(rows);

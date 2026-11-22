@@ -18,6 +18,7 @@
       el('btnQuit').addEventListener('click', () => { if (this.onQuit) this.onQuit(); });
       el('btnStart').addEventListener('click', () => { if (this.onStart) this.onStart(); });
       el('btnAgain').addEventListener('click', () => { if (this.onAgain) this.onAgain(); });
+      el('btnTwist').addEventListener('click', () => this.revealTwist());
       el('btnHome').addEventListener('click', () => { if (this.onHome) this.onHome(); });
       for (const id of ['btnSound', 'btnSound0']) el(id).addEventListener('click', () => { if (this.onSound) this.onSound(); });
       el('btnAuto').addEventListener('click', () => { this.setAuto(!this.auto); });
@@ -331,6 +332,13 @@
       el('epiPlace').textContent = d.place + 'にて';
       el('epiCause').textContent = d.cause;
       el('epiNote').textContent = d.note;
+      /* 意味がわかると怖い話: 死因と説明は、「意味を知る」まで伏せておく（先に出すと、種が割れる） */
+      const tw = d.twist, box = el('epiTwist');
+      this._twist = tw ? d : null;
+      box.hidden = !tw; el('epiTwistA').hidden = true; el('btnTwist').hidden = false; el('btnTwist').setAttribute('aria-expanded', 'false');
+      el('epiNote').hidden = !!tw;
+      if (tw) { el('epiTwistQ').textContent = tw.q; el('epiTwistA').textContent = tw.a; el('epiCause').textContent = '　'; el('epiCause').classList.add('is-veiled'); }
+      else el('epiCause').classList.remove('is-veiled');
       el('epiMem').textContent = d.memCount ? 'たどった記憶は' + U.kanji(d.memCount) + 'つ。' : '';
       const e = el('epi'); e.hidden = false; e.scrollTop = 0;
       await U.wait(60);
@@ -339,6 +347,15 @@
       el('btnAgain').focus({ preventScroll: true });
     }
     hideEpitaph() { const e = el('epi'); e.classList.remove('is-on'); e.hidden = true; }
+    /* 種明かし。死因の名前と説明も、ここで出す */
+    revealTwist() {
+      const d = this._twist; if (!d) return;
+      const a = el('epiTwistA'); a.hidden = false; requestAnimationFrame(() => a.classList.add('is-on'));
+      el('btnTwist').hidden = true; el('btnTwist').setAttribute('aria-expanded', 'true');
+      const c = el('epiCause'); c.textContent = d.cause; c.classList.remove('is-veiled');
+      el('epiNote').hidden = false;
+      el('btnAgain').focus({ preventScroll: true });
+    }
 
     /* ---- 過去帳 ---- */
     ledgerData() { return U.store.get('si.ledger', []); }

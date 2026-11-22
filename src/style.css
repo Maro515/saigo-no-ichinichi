@@ -279,6 +279,13 @@ h1, h2, p { font-style: normal; }
 }
 .epi-side { min-width: 0; }
 .epi-note { margin: 0; font-size: var(--text-sm); line-height: 2.1; color: var(--color-muted); word-break: auto-phrase; text-wrap: pretty; }
+.epi-twist { margin: 0 0 var(--space-xl); padding: var(--space-md) 0; border-block: var(--rule-hair) solid var(--color-rule); }
+.epi-twist-label { margin: 0 0 var(--space-xs); font-size: var(--text-xs); letter-spacing: 0.24em; color: var(--color-muted); }
+.epi-twist-q { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); line-height: 1.9; letter-spacing: 0.06em; word-break: auto-phrase; text-wrap: pretty; }
+.epi-twist-btn { margin-top: var(--space-sm); }
+.epi-twist-a { margin: var(--space-sm) 0 0; font-size: var(--text-sm); line-height: 2.1; word-break: auto-phrase; text-wrap: pretty; opacity: 0; transition: opacity 1200ms var(--ease-out); }
+.epi-twist-a.is-on { opacity: 1; }
+.epi-cause.is-veiled { min-block-size: 3em; }
 .epi-mem { margin: var(--space-md) 0 0; font-size: var(--text-sm); letter-spacing: 0.12em; color: var(--color-muted); }
 .epi-actions { margin-top: var(--space-xl); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-xl); }
 

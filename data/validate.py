@@ -16,7 +16,7 @@ SEASONS = {'any', 'spring', 'summer', 'autumn', 'winter'}
 WEATHERS = {'any', 'clear', 'cloudy', 'rain', 'snow', 'fog', 'storm'}
 JOBS = {'office', 'construction', 'factory', 'farm', 'fishery', 'forestry', 'driver', 'medical', 'teacher', 'craft',
         'shop', 'public', 'art', 'home', 'student'}
-TOP_KEYS = {'id', 'cat', 'group', 'name', 'place', 'age', 'sex', 'season', 'weather', 'aware', 'job', 'beats', 'end', 'note', 'mute', 'bound'}
+TOP_KEYS = {'id', 'cat', 'group', 'name', 'place', 'age', 'sex', 'season', 'weather', 'aware', 'job', 'beats', 'end', 'note', 'mute', 'bound', 'twist'}
 BEAT_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'text', 'bound'}
 END_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'fx', 'lines', 'hit', 'state', 'see'}
 SEES = {'car', 'car-R', 'car-L', 'car-F', 'man'}
@@ -100,7 +100,7 @@ def check_entry(e, prefix, err_all):
     for k in e:
         if k not in TOP_KEYS:
             err(f'知らない項目 {k}')
-    for k in TOP_KEYS - {'job', 'mute', 'bound'}:
+    for k in TOP_KEYS - {'job', 'mute', 'bound', 'twist'}:
         if k not in e:
             err(f'項目がない: {k}')
     if prefix and not re.match(rf'^{re.escape(prefix)}-\d{{3}}$', str(eid)):
@@ -162,6 +162,25 @@ def check_entry(e, prefix, err_all):
                 err(f'note の言い回し 「{g}」 は使わない')
         if re.search(r'(です|ます)。', n):
             err('note は「だ・である」で書く')
+    # 意味がわかると怖い話（twist）: q 気づき 15〜60 字、a 種明かし 50〜220 字。思いがけない最期だけ
+    if 'twist' in e:
+        tw = e['twist']
+        if not isinstance(tw, dict) or set(tw) - {'q', 'a'}:
+            err('twist は {"q": 気づき, "a": 種明かし}')
+        else:
+            q, aa = tw.get('q'), tw.get('a')
+            if not isinstance(q, str) or not (15 <= len(q) <= 60):
+                err(f'twist.q は 15〜60 字（いま {len(q) if isinstance(q, str) else "?"} 字）')
+            if not isinstance(aa, str) or not (50 <= len(aa) <= 220):
+                err(f'twist.a は 50〜220 字（いま {len(aa) if isinstance(aa, str) else "?"} 字）')
+            if isinstance(q, str) and isinstance(aa, str) and ('{大切な人}' in q + aa or '{呼び名}' in q + aa):
+                err('twist に置き換えは使えない')
+            if isinstance(aa, str):
+                for g in NG:
+                    if g in aa:
+                        err(f'twist.a の言い回し 「{g}」 は使わない')
+        if e.get('aware'):
+            err('twist は思いがけない最期だけ（aware は false）')
     lo = a[0] if isinstance(a, list) and a and isinstance(a[0], int) else 0
     stages = [b.get('stage') for b in bs if isinstance(b, dict)] + [en.get('stage')]
     if 'car' in stages and lo < 18:
@@ -194,6 +213,8 @@ def main():
                 errs.append(f'{os.path.basename(p)}: JSON が読めない: {ex}')
                 continue
             pre = os.path.splitext(os.path.basename(p))[0]
+            m = re.match(r'^imi_([a-z])$', pre)
+            if m: pre = 'im' + m.group(1)              # 意味がわかると怖い話のファイル（imi_b.json → imb）
             for e in data:
                 check_entry(e, pre, errs)
                 if e.get('id') in ids:
