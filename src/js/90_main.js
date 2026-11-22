@@ -31,6 +31,12 @@
       const f = K.figure({ pose: cp.pose, top: '#8c6f5e', bottom: '#3d4352', hair: K.P.hairGray, seat: cp.seat });
       K.at(f, cp.p[0], cp.p[1], cp.p[2], cp.ry); st.group.add(f); ticks.push((t) => f.userData.tick(t));
     }
+    if (q.get('visit')) {
+      /* 来る人の立ち位置を、まとめて見る（?visit=1）。白は仕事の人（staff）、色つきは見舞いの人（visit） */
+      const put = (sp, top) => { if (!sp) return; const f = K.figure({ pose: sp.pose || 'stand', seat: sp.seat, top, bottom: '#4a4f5c', hair: '#2e2a28', hairStyle: 'hair_bun' }); K.at(f, sp.p[0], sp.p[1], sp.p[2], sp.ry || 0); st.group.add(f); ticks.push((t) => f.userData.tick(t)); };
+      put(st.staff, '#e8eef0');
+      (st.visit || []).forEach((sp, i) => put(sp, ['#a0605a', '#5a7a9a'][i % 2]));
+    }
     if (q.get('spots')) {
       for (const s of st.spots) { const l = K.memoryLight(); l.position.fromArray(s); l.userData.baseY = s[1]; st.group.add(l); ticks.push((t, dt) => l.userData.tick(t, dt, l.position.distanceTo(rig.pos))); }
     }
@@ -132,8 +138,9 @@
     U.speed = 100000; app.pace = 0.00001; app.fast = 1000; app.ui.readSpeed = 1000; app.ui.setAuto(true);
     if (app.token) app.token.cancel();
     U.el('title').hidden = true; app.state = 'play';
-    const fail = [], modes = {}; let ok = 0, floats = 0;
-    const whole = q.get('selftest') === 'day', stat = { talk: 0, mem: 0, rise: 0, sit: 0, guest: 0, skip: 0, enter: 0, beat: 0, walk: 0, bed: 0, note: 0 };
+    const fail = [], modes = {}, logs = []; let ok = 0, floats = 0;
+    const drama = q.get('selftest') === 'drama', dstat = { scene: 0, talk: 0, amb: 0, mem: 0, lapse: 0, cut: 0 };
+    const whole = q.get('selftest') === 'day', stat = { talk: 0, mem: 0, rise: 0, sit: 0, guest: 0, skip: 0, enter: 0, beat: 0, walk: 0, bed: 0, note: 0, kin: 0, care: 0, aside: 0, amb: 0, away: 0, phone: 0, fill: 0, world: 0, hours: 0, bedHours: 0, bedEv: 0 };
     const realFloat = app.ui.float.bind(app.ui); app.ui.float = (...a) => { floats++; realFloat(a[0], a[1], a[2], a[3], 30); };
     const t0 = performance.now();
     for (let i = from; i < Math.min(all.length, from + n); i++) {
@@ -153,17 +160,26 @@
           day.stat = stat;
           await day.run();
           if (day.m < day.tEnd - 0.5) throw new Error('時刻が最期まで進んでいない ' + day.m + ' / ' + day.tEnd);
+        } else if (drama) {
+          /* ドラマで見る運びを、待ち時間なしで通す */
+          app.seenMems = [];
+          const mems = L.pickMemories(app.life, app.data.memories, app.r, []);
+          const dr = app.drama = new SI.Drama(app, c, app.life, mems, d, tk);
+          await dr.run();
+          for (const k in dstat) dstat[k] += dr.stat[k];
         } else await app.enterScene(d.scene(), tk, false, c.place);
         app.update(0.05); app.rig.update(0.05); app.env.update(0.05, app.rig.root.position);
         await d.run('ためしの一言。');
         app.update(0.05); app.rig.update(0.05); app.env.update(0.05, app.rig.root.position);
+        if (app.day && app.day.evlog) logs.push(c.id, ...app.day.evlog);
+        if (app.drama) { app.drama.stop(); app.drama = null; app.ui.cinema(false); }
         if (app.day) { app.day.stop(); app.day = null; }
         if (app.rig.free) throw new Error('最期のあとも、歩ける状態のまま');
         ok++;
-      } catch (e) { fail.push(c.id + ' ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); if (window.console) console.error('selftest ' + c.id, e); if (app.day) { app.day.stop(); app.day = null; } }
-      if (i % 10 === 0) { out.textContent = `${whole ? '一日の通し試験' : '最期の場面の通し試験'} ${i - from + 1} / ${Math.min(n, all.length - from)} …`; await U.wait(0); }
+      } catch (e) { fail.push(c.id + ' ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); if (window.console) console.error('selftest ' + c.id, e); if (app.day) { app.day.stop(); app.day = null; } if (app.drama) { app.drama.stop(); app.drama = null; app.ui.cinema(false); } }
+      if (i % 10 === 0) { out.textContent = `${whole ? '一日の通し試験' : (drama ? 'ドラマの通し試験' : '最期の場面の通し試験')} ${i - from + 1} / ${Math.min(n, all.length - from)} …`; await U.wait(0); }
     }
-    out.textContent = `${whole ? '一日の通し試験' : '最期の場面の通し試験'} 完了\n件数 ${ok + fail.length}（成功 ${ok} / 失敗 ${fail.length}）\n運び方 ${JSON.stringify(modes)}\n出した短い言葉 ${floats}\n${whole ? '一日のあいだにしたこと ' + JSON.stringify(stat) + '\n' : ''}時間 ${((performance.now() - t0) / 1000).toFixed(1)} 秒\n\n` + fail.join('\n');
+    out.textContent = `${whole ? '一日の通し試験' : (drama ? 'ドラマの通し試験' : '最期の場面の通し試験')} 完了\n件数 ${ok + fail.length}（成功 ${ok} / 失敗 ${fail.length}）\n運び方 ${JSON.stringify(modes)}\n出した短い言葉 ${floats}\n${whole ? '一日のあいだにしたこと ' + JSON.stringify(stat, (k, v) => typeof v === 'number' ? Math.round(v * 10) / 10 : v).replace(/,/g, ', ') + '\n寝たきりの時間の出来事（1 時間あたり、合間の出来事を除く） ' + (stat.bedEv / Math.max(1, stat.bedHours)).toFixed(2) + '\n' : ''}${drama ? 'ドラマの中身 ' + JSON.stringify(dstat).replace(/,/g, ', ') + '\n' : ''}時間 ${((performance.now() - t0) / 1000).toFixed(1)} 秒\n\n` + fail.join('\n') + (logs.length ? '\n' + logs.join('\n') : '');
     document.title = `selftest ${ok}/${ok + fail.length}`;
   }
 

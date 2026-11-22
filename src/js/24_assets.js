@@ -64,7 +64,7 @@
   K.figure = function (o) {
     if (!A.ready) return procFigure(o);
     try { return modelFigure(o || {}); }
-    catch (e) { A.ready = false; return procFigure(o); }        // 途中でつまずいたら、以後は手組みの形にする
+    catch (e) { A.ready = false; if (window.console) console.error('人物のモデルでつまずいた', e && e.stack && e.stack.split('\n').slice(0, 4).join(' / '), JSON.stringify(o || {})); return procFigure(o); }        // 途中でつまずいたら、以後は手組みの形にする
   };
   function modelFigure(o) {
     const s = (o.h || 1.6) / 1.6, pose = o.pose || 'stand', child = !!o.child;
@@ -146,11 +146,15 @@
     root.userData.parts = { hips, hipY, spine, chest, neck, head, aL, aR, lL, lR, adduct, curl, bones, hairs, model };
     const ph = Math.random() * 6;
     const base = { sx: spine.rotation.x, hx: head.rotation.x, ar: aR.el.rotation.x };
+    const restQ = [aL, aR].map(a => [a.sh, a.el, a.hand].map(j => j.bone.quaternion.clone()));     // 手をのばしたあと、腕をもとの形に戻すため
     /* そばの人の反応。lean 身を乗り出す / hy・hp 顔を向ける / att こちらを見つめる / sob 肩がふるえる / reach 手をのばす */
     const R = { lean: 0, leanT: 0, hy: 0, hyT: 0, hp: 0, hpT: 0, att: 0, attT: 0, sob: 0, sobT: 0, reach: null, move: null };
     root.userData.react = (r) => {
       for (const k of ['lean', 'hy', 'hp', 'att', 'sob']) if (r[k] != null) R[k + 'T'] = r[k];
-      if ('reach' in r) R.reach = r.reach;
+      if ('reach' in r) {
+        if (!r.reach && R.reach) [aL, aR].forEach((a, i) => { [a.sh, a.el, a.hand].forEach((j, k) => j.bone.quaternion.copy(restQ[i][k])); curl(a, 0.32); });
+        R.reach = r.reach;
+      }
       if (r.move) R.move = r.move.clone();                          // そばへ寄る（床の上の位置）
     };
     root.userData.pose = pose;

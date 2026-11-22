@@ -28,6 +28,13 @@ def main():
     causes = []
     for p in sorted(glob.glob(os.path.join(ROOT, 'data', 'causes', '*.json'))):
         causes += json.load(open(p, encoding='utf-8'))
+    total = len(causes)
+    # 体験に出すのは、data/focus.json で選んだもの（事故・災害・事件と、病気の突然死）だけ
+    focus_path = os.path.join(ROOT, 'data', 'focus.json')
+    if os.path.exists(focus_path):
+        focus = json.load(open(focus_path, encoding='utf-8'))
+        cats, ill = set(focus.get('cats', [])), set(focus.get('ill', []))
+        causes = [c for c in causes if (c['cat'] in cats and not c.get('aware')) or c['id'] in ill]
     memories = []
     for p in sorted(glob.glob(os.path.join(ROOT, 'data', 'life', 'mem_*.json'))):
         memories += json.load(open(p, encoding='utf-8'))
@@ -53,7 +60,7 @@ def main():
     out = os.path.join(ROOT, 'index.html')
     with open(out, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f'index.html {os.path.getsize(out) / 1e6:.2f} MB / 最期 {len(causes)} 件 / 記憶 {len(memories)} 件 / 一言 {len(last)} 件 / モデル {len(assets) * 3 // 4 / 1e6:.2f} MB')
+    print(f'index.html {os.path.getsize(out) / 1e6:.2f} MB / 最期 {len(causes)} 件（全 {total} 件から選んだもの） / 記憶 {len(memories)} 件 / 一言 {len(last)} 件 / モデル {len(assets) * 3 // 4 / 1e6:.2f} MB')
 
 
 if __name__ == '__main__':

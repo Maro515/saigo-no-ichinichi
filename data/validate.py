@@ -6,7 +6,7 @@
 """
 import argparse, glob, json, os, re, sys
 
-CATS = {'ill', 'acc', 'dis', 'old'}
+CATS = {'ill', 'acc', 'dis', 'old', 'crm'}
 STAGES = {'living', 'washitsu', 'bedroom', 'bath', 'hospital', 'icu', 'hospice', 'facility', 'office', 'shop',
           'worksite', 'street', 'train', 'car', 'park', 'field', 'mountain', 'river', 'sea'}
 POS = {'lie', 'sit', 'stand', 'walk'}

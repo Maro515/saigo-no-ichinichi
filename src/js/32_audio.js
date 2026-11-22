@@ -261,6 +261,120 @@
         if (i % 5 === 2) this._sine(tt, 2400 + Math.random() * 900, 2300, 0.18, g * 0.5);
       }
     }
+    /* ---------- 一日のあいだの、小さな音 ---------- */
+    /* 引き戸を、軽く 2 回たたく音 */
+    knock() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime;
+      for (const d of [0, 0.19]) { this._noise(t + d, 0.06, 'bandpass', 820, 2.2, 0.05); this._sine(t + d, 190, 120, 0.07, 0.03); }
+    }
+    /* 引き戸が、レールの上をすべる音 */
+    door() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime;
+      this._noise(t, 0.55, 'lowpass', 420, 0.8, 0.03);
+      this._noise(t + 0.5, 0.05, 'bandpass', 1100, 3, 0.02);
+    }
+    /* 電子体温計（ピピッ、を 3 回） */
+    thermo() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      for (let k = 0; k < 3; k++) for (const d of [0, 0.12]) this._sine(t + k * 0.62 + d, 3150, 3150, 0.07, 0.016);
+    }
+    /* 血圧計。空気を送る音と、抜ける音 */
+    cuff() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime;
+      for (let i = 0; i < 9; i++) this._noise(t + i * 0.33, 0.16, 'lowpass', 520, 0.8, 0.026);
+      this._noise(t + 3.4, 2.2, 'highpass', 1700, 0.6, 0.012);
+    }
+    /* 家の電話の呼び出し（電子音のさえずり）を 2 回 */
+    phone() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      for (let k = 0; k < 2; k++) for (let i = 0; i < 16; i++) this._sine(t + k * 3 + i * 0.06, i % 2 ? 1520 : 1240, i % 2 ? 1520 : 1240, 0.05, 0.016);
+    }
+    /* 玄関のチャイム（ピンポーン） */
+    intercom() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      for (const [f, d, len] of [[659, 0, 0.9], [523, 0.55, 1.6]]) for (const [m, a] of [[1, 1], [2, 0.18]]) this._sine(t + d, f * m, f * m, len, 0.03 * a);
+    }
+    /* 館内放送の前の、のぼっていく 4 つの音と、くぐもった声 */
+    pa() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      [523, 659, 784, 1047].forEach((f, i) => this._sine(t + i * 0.32, f, f, 0.9, 0.014));
+      setTimeout(() => this.murmur(14, 0.35, 190), 1700);
+    }
+    /* 遠くの寺の鐘 */
+    bell() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      for (const [f, a, d] of [[128, 1, 7], [256.8, 0.45, 5], [347, 0.3, 4], [512, 0.12, 3]]) this._sine(t, f, f * 0.995, d, 0.022 * a);
+    }
+    /* 遠くを通る電車や飛行機の、ふくらんで消えていく低い音 */
+    rumble(sec) {
+      if (!this.ok()) return;
+      const c = this.ctx, t = c.currentTime, dur = sec || 8, s = c.createBufferSource(); s.buffer = this.buf.white; s.loop = true;
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 230;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(this.amb); s.start(t); s.stop(t + dur + 0.1);
+    }
+    /* 表をバイクが通りすぎる */
+    bike() {
+      if (!this.ok()) return;
+      const c = this.ctx, t = c.currentTime, o = c.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(118, t); o.frequency.linearRampToValueAtTime(124, t + 1.4); o.frequency.exponentialRampToValueAtTime(82, t + 3.2);
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 700;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.03, t + 1.5); g.gain.exponentialRampToValueAtTime(0.0001, t + 3.4);
+      o.connect(f); f.connect(g); g.connect(this.amb); o.start(t); o.stop(t + 3.5);
+    }
+    /* 遠ざかっていく救急車 */
+    sirenFar() { this.siren(9, 0.5); }
+    /* たんの吸引。管が空気と水を吸う音 */
+    suction() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime;
+      this._noise(t, 2.6, 'bandpass', 1900, 1.2, 0.02);
+      for (let i = 0; i < 7; i++) this._noise(t + 0.3 + i * 0.3 + Math.random() * 0.1, 0.08, 'bandpass', 600 + Math.random() * 500, 4, 0.03);
+    }
+    /* 廊下を行く足音 */
+    steps(n) { if (!this.ok()) return; for (let i = 0; i < (n || 7); i++) setTimeout(() => this.step(false), i * 520); }
+    /* 給湯器の、湯がわいたことを知らせるふし */
+    bath() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      [784, 659, 523, 659, 784, 1047].forEach((f, i) => this._sine(t + i * 0.24, f, f, 0.32, 0.016));
+    }
+    /* 電車のドアが開くときの、ふたつの音 */
+    doors() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.05;
+      for (let k = 0; k < 2; k++) for (const [f, d] of [[880, 0], [698, 0.32]]) this._sine(t + k * 0.8 + d, f, f, 0.4, 0.02);
+      this._noise(t + 1.7, 0.9, 'lowpass', 600, 0.8, 0.03);
+    }
+    /* ドラマで見るときの、静かな伴奏。ピアノに近い音で、四つの和音をゆっくりくり返す。off で止める（最期の前は、音楽を落とす） */
+    score(on) {
+      if (this._score) { clearInterval(this._score); this._score = null; }
+      if (!on || !this.ok()) return;
+      const chords = [[220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66], [164.81, 207.65, 246.94]];     // Am F G E
+      let i = 0;
+      const play = () => {
+        if (!this.ok()) return;
+        const c = this.ctx, t = c.currentTime + 0.05, ch = chords[i++ % chords.length];
+        ch.forEach((f, k) => {
+          const tt = t + k * 0.22, g = c.createGain();
+          g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(0.011, tt + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, tt + 3.9);
+          for (const [m, a] of [[1, 1], [2, 0.22], [3, 0.05]]) { const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f * m; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(g); o.start(tt); o.stop(tt + 4); }
+          g.connect(this.mem);
+        });
+        this._sine(t, ch[0] / 2, ch[0] / 2, 4.2, 0.008, this.mem);
+      };
+      play(); this._score = setInterval(play, 4400);
+    }
+    /* 部屋の外の話し声や、テレビの声 */
+    voices() { if (!this.ok()) return; this.murmur(9, 0.35, 160 + Math.random() * 60); setTimeout(() => this.murmur(6, 0.3, 210 + Math.random() * 40), 1600); }
     /* 遠くの子どもたちの声 */
     kids() { if (!this.ok()) return; for (let i = 0; i < 4; i++) setTimeout(() => this.murmur(3 + Math.floor(Math.random() * 3), 0.3, 300 + Math.random() * 90), i * 900 + Math.random() * 400); }
     /* 人の声らしい、言葉にならないつぶやき（まわりの音として鳴るので、こもり方も一緒に変わる） */

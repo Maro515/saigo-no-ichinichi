@@ -60,8 +60,11 @@
       if (this.fast) this.ui.readSpeed = this.fast;
       /* 一時間を、何分で過ごすか（1〜5）。確認用に ?hour=0.05 のような小さな値も受ける */
       this.hourMin = q.get('hour') ? Math.max(0.005, parseFloat(q.get('hour'))) : U.clamp(U.store.get('si.hour', 2), 1, 5);
-      this.day = null; this.anchor = null;
+      this.day = null; this.drama = null; this.anchor = null;
       this.ui.pace(this.hourMin);
+      /* 見かた。ドラマで見る（drama）か、自分で過ごす（free）か。確認用に ?mode=free も受ける */
+      this.mode = q.get('mode') === 'free' || q.get('mode') === 'drama' ? q.get('mode') : (U.store.get('si.mode', 'drama') === 'free' ? 'free' : 'drama');
+      this.ui.mode(this.mode);
       rig.reduced = this.ui.reduced;
       rig.onTap = (x, y) => this.onTap(x, y);
       rig.onStep = () => this.audio.step(!!(this.stage && !this.stage.indoor));
@@ -71,6 +74,7 @@
       ui.onUse = () => !!(this.day && this.day.use());
       ui.onRest = () => { if (this.day) this.day.toggleDoze(); };
       ui.onPace = (v) => { this.hourMin = v; U.store.set('si.hour', v); ui.pace(v); };
+      ui.onMode = (v) => { this.mode = v === 'free' ? 'free' : 'drama'; U.store.set('si.mode', this.mode); ui.mode(this.mode); };
       ui.onStick = (x, y) => { rig.stick.x = x; rig.stick.y = y; };
       ui.onSound = () => { this.audio.init(); this.audio.setEnabled(!this.audio.enabled); ui.sound(this.audio.enabled); };
       this.toTitle();
@@ -81,6 +85,8 @@
     toTitle() {
       if (this.token) this.token.cancel();
       if (this.day) { this.day.stop(); this.day = null; }
+      if (this.drama) { this.drama.stop(); this.drama = null; }
+      this.ui.cinema(false);
       this.rig.wasdMove = false;
       this.token = null; this.starting = false; this.state = 'title';
       const ui = this.ui, env = this.env;
@@ -173,22 +179,28 @@
       const skip = !!this.q.get('end');                  // 確認用: 最期の場面から始める
       this.weary = 0;
       if (this.day) this.day.stop();
+      if (this.drama) { this.drama.stop(); this.drama = null; }
       const dying = new SI.Dying(this, cause, life, tk);
       if (skip) {
         this.day = null; this.seenMems = mems.slice(0, 4);
         await this.enterScene(dying.scene(), tk, false, cause.place);
+      } else if (this.mode === 'drama') {
+        /* ドラマで見る。最期の日を、流れる場面のつながりで見せる */
+        const dr = this.drama = new SI.Drama(this, cause, life, mems, dying, tk);
+        try { await dr.run(); } catch (e) { dr.stop(); this.drama = null; throw e; }
       } else {
         /* 朝から最期の時刻まで、時計は止まらずに進む。そのあいだは自由に過ごせる */
         const day = this.day = new SI.Day(this, cause, life, mems, dying, tk);
         try { await day.run(); } finally { if (this.token !== tk || tk.aborted) day.stop(); }
       }
       this.weary = 0;
-      try { await dying.run(last); } finally { if (this.day) { this.day.stop(); this.day = null; } this.rig.wasdMove = false; }
+      try { await dying.run(last); } finally { if (this.day) { this.day.stop(); this.day = null; } if (this.drama) { this.drama.stop(); this.drama = null; } this.rig.wasdMove = false; }
       await this.epitaph(cause, life, tk);
     }
 
     /* 場面に入る。まぶたは閉じた状態で呼ぶ */
-    async enterScene(b, tk, first, place) {
+    async enterScene(b, tk, first, place, o) {
+      o = o || {};
       const life = this.life, ui = this.ui, rig = this.rig;
       this.clearObjs(); this.usedSpots = [];
       const st = this.setStage(b.stage, b.v, { season: life.season, weather: life.weather, hour: U.timeToHour(b.t), seed: this.sceneSeed });
@@ -201,7 +213,8 @@
       this.audio.ambience(ambFor(st, U.timeToHour(b.t), life.season, life.weather));
       this.audio.heart(70, 0, 0); this.audio.breath(14, 0);
       const label = place || st.label;
-      await ui.card([{ text: U.timeJa(b.t) }, { text: label, sub: true }], tk, { hold: 1500, step: 450, min: 300, force: true });
+      if (o.before) o.before();                          // 目を開ける前に、視線を決めておく（ドラマ）
+      if (!o.noCard) await ui.card([{ text: U.timeJa(b.t) }, { text: label, sub: true }], tk, { hold: 1500, step: 450, min: 300, force: true });
       ui.hud(true, b.t, label);
       await ui.lids('open', first ? 2800 : 1400, tk);
     }
@@ -364,7 +377,7 @@
       U.store.set('si.recent', recent.slice(-Math.min(300, Math.floor(this.data.causes.length * 0.6))));
       if (tk && this.token !== tk) return;       // その間にやめていたら、何もしない
       this.state = 'epitaph'; this.starting = false;
-      ui.clearPlay(); this.clearObjs();
+      ui.clearPlay(); ui.cinema(false); this.clearObjs();
       this.audio.ambience({});
       await ui.showEpitaph({ name: life.name, ageJa: life.ageJa, jobJa: life.jobJa, dateJa: life.dateJa, timeJa: U.timeJa(cause.end.t), place: cause.place, cause: cause.name, note: cause.note, memCount: this.seenMems.length });
     }

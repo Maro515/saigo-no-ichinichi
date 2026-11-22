@@ -25,6 +25,8 @@
       /* 一時間を何分で過ごすか。はじめの画面では選び、体験のあいだは押すたびに 1 分ずつ変わる */
       for (const b of document.querySelectorAll('[data-pace]')) b.addEventListener('click', () => { if (this.onPace) this.onPace(parseInt(b.dataset.pace, 10)); });
       el('btnPace').addEventListener('click', () => { if (this.onPace) this.onPace((Math.round(this.paceMin || 2) % 5) + 1); });
+      /* 見かた（ドラマで見る / 自分で過ごす） */
+      for (const b of document.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { if (this.onMode) this.onMode(b.dataset.mode); });
       this._bindStick();
       this.setAuto(this.auto);
       for (const id of ['btnLedger', 'btnLedger2']) el(id).addEventListener('click', () => this.openLedger(null));
@@ -91,6 +93,28 @@
       for (const b of document.querySelectorAll('[data-pace]')) b.setAttribute('aria-pressed', parseInt(b.dataset.pace, 10) === n ? 'true' : 'false');
       el('paceNote').textContent = '朝から最期までは、ふつう十二時間ほどです。この速さなら、' + U.kanji(Math.max(1, Math.round(12 * v))) + '分前後の体験になります。目を閉じているあいだは、時計が速く進みます。';
     }
+
+    /* 見かたの選択。自分で過ごすときだけ、速さの設定を出す */
+    mode(v) {
+      for (const b of document.querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', b.dataset.mode === v ? 'true' : 'false');
+      el('paceBox').hidden = v !== 'free';
+      el('modeNote').textContent = v === 'free'
+        ? '時計が止まらずに進む一日を、歩いたり、人に話しかけたりしながら過ごします。'
+        : '最期の日を、ドラマのように流れる場面で見ます。操作はいりません。見まわすことはできます。五分ほどです。';
+    }
+    /* ドラマの画面（上下の黒い帯） */
+    cinema(on) { this.root.classList.toggle('is-cinema', !!on); if (!on) this.telop(null); }
+    /* 時刻と場所と、最期までの時間を、左上に出す。ms たつと消える */
+    telop(time, place, left, ms) {
+      const t = el('telop');
+      if (this._telopC) { this._telopC(); this._telopC = null; }
+      if (this._telopF) { cancelAnimationFrame(this._telopF); this._telopF = 0; }        // 出す予約が残っていたら、取り消す
+      if (!time) { t.classList.remove('is-on'); return; }
+      el('telopTime').textContent = time; el('telopPlace').textContent = place || ''; el('telopLeft').textContent = left || '';
+      this._telopF = requestAnimationFrame(() => { this._telopF = 0; t.classList.add('is-on'); });
+      if (ms) this._telopC = U.visibleTimer(ms, () => { this._telopC = null; t.classList.remove('is-on'); });
+    }
+    telopTime(time) { el('telopTime').textContent = time; }
 
     /* ---- 先へ進む合図 ---- */
     advance() {
@@ -243,15 +267,28 @@
     }
     clearSoma() { const b = el('soma'); b.textContent = ''; b.hidden = true; }
     /* 視野のはしに浮かぶ、短い文字（体の感じ、まわりの声） */
-    float(text, cls, xPct, yPct, ms) {
+    float(text, cls, xPct, yPct, ms, side) {
       const box = el('soma'); box.hidden = false;
       const s = document.createElement('span'); s.textContent = text; s.className = cls;
-      if (xPct > 50) s.style.right = (100 - xPct) + '%'; else s.style.left = xPct + '%';
+      if (side === 'r' || (side == null && xPct > 50)) s.style.right = (100 - xPct) + '%'; else s.style.left = xPct + '%';      // side 'r' なら、x を箱の右の端にする
       s.style.top = yPct + '%';
       box.appendChild(s);
       requestAnimationFrame(() => requestAnimationFrame(() => s.classList.add('is-on')));
       setTimeout(() => s.classList.remove('is-on'), ms);
       setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); }, ms + 1500);
+    }
+
+    /* 人物の言葉を、その人の顔（画面の上での位置 sx, sy。% ）にかからないように出す。
+       顔の右か左の空いているほうへ。どちらにも入らないとき（せまい画面など）は、顔の上か下へ */
+    voice(text, sx, sy, ms) {
+      const W = window.innerWidth || 1280, narrow = W < 600, gap = narrow ? 7 : 6;
+      const w = narrow ? Math.min(62, (text.length + 2) * 14.5 / W * 100 + 5) : Math.min(210, 0.42 * W, (text.length + 2) * 15.5) / W * 100;      // 箱の幅の見積もり（%。1 字およそ 15px、箱の最大幅まで）
+      const y = U.clamp(sy - 4, narrow ? 31 : 27, 64), t = '「' + text + '」';
+      const right = () => sx + gap + w <= 98 ? (this.float(t, 'is-voice', sx + gap, y, ms, 'l'), true) : false;
+      const left = () => sx - gap - w >= 2 ? (this.float(t, 'is-voice', sx - gap, y, ms, 'r'), true) : false;
+      if (sx < 50 ? (right() || left()) : (left() || right())) return;
+      const lx = U.clamp(sx - w / 2, 2, 98 - w), up = sy - (narrow ? 20 : 14);
+      this.float(t, 'is-voice', lx, up >= (narrow ? 22 : 20) ? up : U.clamp(sy + 9, 30, 72), ms, 'l');
     }
 
     hint(text, ms) {

@@ -58,7 +58,7 @@
     gesture(name, o) { const b = this.body; if (!this.still && b && b.userData.gesture && this.rig.bodyHolder.visible) b.userData.gesture(name, o); }
 
     classify() {
-      const c = this.cause, sudden = !c.aware && (c.cat === 'acc' || c.cat === 'dis');
+      const c = this.cause, sudden = !c.aware && (c.cat === 'acc' || c.cat === 'dis' || c.cat === 'crm');      // 事件も、事故と同じく突然に来る
       const none = (...ts) => !ts.some(t => this.has(t));
       if (this.vent) return 'ebb';                                           // 機械が息を送っている。本人はもがかない
       if (this.choke) return 'struggle';
@@ -95,7 +95,7 @@
         if (k === 'out') return !!OUT[st];
         if (k === 'in') return !OUT[st] && st !== 'car' && st !== 'train';
         if (k === 'fall') return !!this.fell;
-        if (k === 'env') return c.cat === 'acc' || c.cat === 'dis';
+        if (k === 'env') return c.cat === 'acc' || c.cat === 'dis' || c.cat === 'crm';
         if (k === 'ill') return c.cat === 'ill' || c.cat === 'old';
         if (k === 'day') return h >= 6.5 && h < 17.5;
         if (k === 'dawn') return h >= 3.5 && h < 6.6;
@@ -103,7 +103,7 @@
         if (k === 'sudden') return this.mode === 'rupture' || this.mode === 'collapse';
         if (k === 'awake') return !this.quiet;
         if (k === 'self') return !this.vent && !this.choke;
-        if (k === 'exposed') return (c.cat === 'acc' || c.cat === 'dis') && !this.has('impact') && !this.has('chest') && !this.has('fall') && (this.has('water') || !!OUT[st] || /低体温|凍/.test(c.name));   // 寒さにさらされている
+        if (k === 'exposed') return (c.cat === 'acc' || c.cat === 'dis' || c.cat === 'crm') && !this.has('impact') && !this.has('chest') && !this.has('fall') && (this.has('water') || !!OUT[st] || /低体温|凍/.test(c.name));   // 寒さにさらされている
         if (k.slice(0, 2) === 'v:') return k.slice(2).split('|').includes(this.end.v || 'city');
         return true;
       });

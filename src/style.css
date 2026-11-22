@@ -84,6 +84,29 @@ h1, h2, p { font-style: normal; }
 .act .btn-quiet { background: var(--color-veil); border: var(--rule-hair) solid var(--color-rule); text-decoration: none; color: var(--color-ink); }
 .act .btn-quiet:hover, .act .btn-quiet.is-hover { border-color: var(--color-accent); }
 
+/* ---- ドラマで見るとき: 上下の黒い帯（映画の画面の比率）と、時刻と場所のテロップ ---- */
+.bars { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.bar { position: absolute; left: 0; right: 0; height: 0; background: var(--color-lid); transition: height 1600ms var(--ease-out); }
+.bar-top { top: 0; }
+.bar-bot { bottom: 0; }
+.is-cinema .bar { height: 9vh; }
+.is-cinema .hud { background: none; justify-content: flex-end; }
+.is-cinema .hud-clock, .is-cinema #btnPace { display: none; }           /* 時刻はテロップで出す。速さの設定は使わない */
+.telop {
+  position: fixed; z-index: 12; pointer-events: none;
+  left: max(var(--space-xl), env(safe-area-inset-left)); top: calc(9vh + var(--space-lg));
+  opacity: 0; transition: opacity 1100ms var(--ease-out);
+  text-shadow: 0 1px 2px var(--color-shadow), 0 0 14px var(--color-shadow), 0 0 28px var(--color-shadow);
+}
+.telop.is-on { opacity: 1; }
+.telop p { margin: 0; color: var(--color-ink); -webkit-text-stroke: 0.08em var(--color-shadow); paint-order: stroke fill; }      /* 明るい壁の上でも読めるように、暗いふち */
+.telop-time { font-family: var(--font-display); font-size: var(--text-2xl); line-height: 1.3; letter-spacing: 0.14em; }
+.telop-place { margin-top: 2px; font-size: var(--text-sm); letter-spacing: 0.22em; }
+.telop-left { margin-top: var(--space-sm); font-size: var(--text-sm); letter-spacing: 0.2em; color: var(--color-ink); opacity: 0.86; }
+.telop-left:empty { display: none; }
+.mode { margin: var(--space-lg) 0 0; }
+.chip[aria-pressed="true"][data-mode] { color: var(--color-paper); background: var(--color-accent); border-color: var(--color-accent); }
+
 /* ---- 語り（いま） ---- */
 .narr {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; pointer-events: none;
@@ -301,7 +324,13 @@ h1, h2, p { font-style: normal; }
   .hud { padding-left: var(--space-md); padding-right: var(--space-md); }
   .hud-place { white-space: normal; max-inline-size: 8.5em; line-height: 1.5; }      /* 長い場所の名前は、ボタンに重ならないように折り返す */
   .soma span.is-sense { font-size: var(--text-sm); }
-  .soma span.is-voice { max-width: 62vw; letter-spacing: 0.12em; }
+  .telop { left: var(--space-md); }
+  .telop-time { font-size: var(--text-xl); }
+  .telop-left { font-size: var(--text-xs); }
+  /* ドラマのときは、右上のボタンを 1 行に収めて、上の黒い帯からはみ出させない */
+  .is-cinema .hud-actions { max-width: none; flex-wrap: nowrap; gap: 6px; }
+  .is-cinema .hud .chip { min-height: 38px; padding: 0 0.7em; font-size: var(--text-xs); }
+  .soma span.is-voice { max-width: 62vw; letter-spacing: 0.12em; background: var(--color-scrim); padding: 0.15em 0.6em; border-radius: var(--radius-sm); }      /* せまい画面では、明るい窓の上でも読めるよう、薄い帯をしく */
   .hud-actions { max-width: 62%; }
   .stick { bottom: calc(168px + env(safe-area-inset-bottom)); left: var(--space-md); width: 104px; height: 104px; }
   .act { gap: var(--space-xs); }

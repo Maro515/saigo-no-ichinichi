@@ -34,6 +34,9 @@
 <div id="card" class="card" hidden><div id="cardText" class="card-text" aria-live="polite"></div></div>
 <div id="mem" class="mem" hidden><p id="memLabel" class="mem-label"></p><div id="memText" class="mem-text" aria-live="polite"></div></div>
 <div id="soma" class="soma" hidden aria-hidden="true"></div>
+<!-- ドラマで見るときの、上下の黒い帯とテロップ -->
+<div id="bars" class="bars" aria-hidden="true"><i class="bar bar-top"></i><i class="bar bar-bot"></i></div>
+<div id="telop" class="telop" aria-live="polite"><p id="telopTime" class="telop-time"></p><p id="telopPlace" class="telop-place"></p><p id="telopLeft" class="telop-left"></p></div>
 <div id="narr" class="narr" hidden><p id="narrText" class="narr-text" aria-live="polite"></p></div>
 <div id="act" class="act" hidden>
   <button id="btnRest" class="btn btn-quiet" type="button" aria-pressed="false" hidden>目を閉じる</button>
@@ -45,7 +48,7 @@
 <main id="title" class="title">
   <div class="title-head">
     <h1 class="title-name">最期の一日</h1>
-    <p class="title-lead">ある人の、最後の一日を過ごします。<br>誰の、どんな一日になるかは、選べません。<br>最期の時刻が来るまで、時計は進みつづけます。</p>
+    <p class="title-lead">ある人の、最後の一日を見届けます。<br>それは事故か、事件か、突然の病か。<br>誰の、どんな一日になるかは、選べません。</p>
   </div>
   <div class="title-foot">
     <p id="titleCount" class="title-count"></p>
@@ -56,7 +59,15 @@
         <button id="btnSound0" class="btn btn-quiet" type="button" aria-pressed="true">音あり</button>
       </div>
     </div>
-    <div class="pace" role="group" aria-labelledby="paceLabel">
+    <div class="mode" role="group" aria-labelledby="modeLabel">
+      <p id="modeLabel" class="pace-label">見かた</p>
+      <div class="pace-opts">
+        <button class="chip" type="button" data-mode="drama" aria-pressed="true">ドラマで見る</button>
+        <button class="chip" type="button" data-mode="free" aria-pressed="false">自分で過ごす</button>
+      </div>
+      <p id="modeNote" class="pace-note"></p>
+    </div>
+    <div id="paceBox" class="pace" role="group" aria-labelledby="paceLabel">
       <p id="paceLabel" class="pace-label">一時間を、何分で過ごすか</p>
       <div class="pace-opts">
         <button class="chip" type="button" data-pace="1" aria-pressed="false">一分</button>
@@ -67,7 +78,7 @@
       </div>
       <p id="paceNote" class="pace-note"></p>
     </div>
-    <p class="title-note">死を扱います。事故や病気の場面があります。つらくなったら、いつでもやめてください。</p>
+    <p class="title-note">死を扱います。事故や事件、突然の病で亡くなる場面があります。つらくなったら、いつでもやめてください。</p>
     <p id="titleError" class="title-error" role="alert" hidden></p>
   </div>
 </main>
