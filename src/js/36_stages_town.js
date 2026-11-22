@@ -19,9 +19,9 @@
     const g = new T.Group(), lamps = [], rng = U.rng(c.seed + 31), sp = K.seasonal(c);
     const wet = c.weather === 'rain' || c.weather === 'storm';
     const gr = K.ground(260, sp.snowy ? P.snow : '#8d8d88', -0.03, 50); gr.position.z = 10; g.add(gr);
-    const main = K.road(7, 130, { wet }); K.at(main, 0, 0, 10); g.add(main);
-    const cross = K.road(7, 130, { wet }); cross.rotation.y = PI / 2; K.at(cross, 0, 0.004, 20); g.add(cross);
-    g.add(K.plane(7.2, 7.2, K.mTex(K.tex.rep(K.tex.noise(wet ? '#33353a' : P.asphalt, 0.1), 2, 2), { rough: wet ? 0.35 : 0.95 }), 0, 0.024, 20, { noShadow: true }));
+    const main = K.road(7, 130, { wet, gaps: [[2.5, 17.5]] }); K.at(main, 0, 0, 10); g.add(main);
+    const cross = K.road(7, 130, { wet, gaps: [[-7.5, 7.5]] }); cross.rotation.y = PI / 2; K.at(cross, 0, 0.004, 20); g.add(cross);
+    g.add(K.plane(7.2, 7.2, K.mTex(K.tex.rep(K.tex.noise(wet ? '#33353a' : (sp.snowy ? '#c9ced2' : P.asphalt), 0.1), 2, 2), { rough: wet ? 0.35 : (sp.snowy ? 0.6 : 0.95) }), 0, 0.024, 20, { noShadow: true }));
     const cw1 = K.crosswalk(7, 2.4); cw1.rotation.y = PI / 2; K.at(cw1, -4.75, 0.012, 20); g.add(cw1);
     const cw2 = K.crosswalk(7, 2.4); K.at(cw2, 0, 0.012, 15.0); g.add(cw2);
     const cw3 = K.crosswalk(7, 2.4); cw3.rotation.y = PI / 2; K.at(cw3, 4.75, 0.012, 20); g.add(cw3);
@@ -180,7 +180,7 @@
     for (const sx of [-1.6, 1.6]) { sw.add(K.rod([sx, 0, -0.9], [sx, 2.4, 0], 0.045, st)); sw.add(K.rod([sx, 0, 0.9], [sx, 2.4, 0], 0.045, st)); }
     sw.add(K.rod([-1.6, 2.4, 0], [1.6, 2.4, 0], 0.045, st));
     const seats = [];
-    for (const sx of [-0.8, 0.8]) { const sg = K.group(sx, 2.4, 0); sg.add(K.rod([-0.2, 0, 0], [-0.2, -1.9, 0], 0.008, K.m(P.steelDark), { noCast: true })); sg.add(K.rod([0.2, 0, 0], [0.2, -1.9, 0], 0.008, K.m(P.steelDark), { noCast: true })); sg.add(K.box(0.5, 0.04, 0.2, K.m(P.wood), 0, -1.94, 0)); sw.add(sg); seats.push(sg); }
+    for (const sx of [-0.8, 0.8]) { const sg = K.group(sx, 2.4, 0); sg.add(K.rod([-0.2, 0, 0], [-0.2, -1.9, 0], 0.008, K.m(P.steelDark), { noCast: true })); sg.add(K.rod([0.2, 0, 0], [0.2, -1.9, 0], 0.008, K.m(P.steelDark), { noCast: true })); sg.add(K.box(0.5, 0.04, 0.2, K.m(P.wood), 0, -1.94, 0)); sg.userData.dyn = true; sw.add(sg); seats.push(sg); }
     g.add(sw);
     const sl = K.group(-17, 0, 14, -0.6);
     sl.add(K.box(1.0, 0.08, 1.0, st, 0, 1.7, 0)); for (const sx of [-0.45, 0.45]) for (const sz of [-0.45, 0.45]) sl.add(K.cyl(0.04, 1.7, st, sx, 0, sz, { seg: 6 }));
@@ -252,7 +252,7 @@
   /* ================= 電車の車内 ================= */
   S.train = function (c) {
     const g = new T.Group(), lamps = [], rng = U.rng(c.seed + 33), sp = K.seasonal(c), people = [];
-    const car = new T.Group(); g.add(car);
+    const car = new T.Group(); g.add(car); car.userData.noSnowCap = true;           // 車内には積もらせない
     const Wd = 2.8, L = 18, H = 2.25, hx = Wd / 2;
     const wallM = K.m('#dcdcd6', { rough: 0.6 }), seatM = K.m(U.pick(rng, ['#4f7a5c', '#3f5a8c', '#7a3f4a', '#5c6a8c'])), stl = K.m(P.steel, { metal: 0.6, rough: 0.35 });
     car.add(K.plane(Wd, L, K.mTex(K.tex.rep(K.tex.noise('#9a9c98', 0.06), 2, 12), { rough: 0.7 }), 0, 0, 0));
@@ -293,7 +293,7 @@
     });
     for (const p of [[0.35, -5.2, 2.0], [-0.4, 5.4, -1.2]]) { const f = walker(rng, { pose: 'stand' }); K.at(f, p[0], 0, p[1], p[2]); car.add(f); people.push(f); }
     /* 外 */
-    const out = new T.Group(); g.add(out);
+    const out = new T.Group(); g.add(out); out.userData.noSnowCap = true;          // 流れる景色（雪は木や家がそれぞれ持つ）
     const gr = K.ground(500, sp.snowy ? P.snow : sp.grass, -1.2, 70); g.add(gr);
     g.add(K.box(6, 0.5, 400, K.m('#77726a'), 0, -1.25, 0, { noCast: true }));
     const items = [], SPAN = 260;
@@ -371,12 +371,12 @@
       car.add(driver);
     }
     /* ---- 外 ---- */
-    const out = new T.Group(); g.add(out);
+    const out = new T.Group(); g.add(out); out.userData.noSnowCap = true;          // 流れる景色（雪は木や家がそれぞれ持つ）
     const SPAN = 300, items = [];
     const roadW = v === 'highway' ? 17 : 7, rcx = v === 'highway' ? -6.2 : -1.75;
     const gr = K.ground(700, sp.snowy ? P.snow : (v === 'city' ? '#8d8d88' : sp.field), -0.06, 80); gr.position.z = 200; g.add(gr);
     const am = K.mTex(K.tex.rep(K.tex.noise(wet ? '#303236' : (sp.snowy ? '#8d9196' : P.asphalt), 0.1), roadW / 3, 120), { rough: wet ? 0.3 : 0.95 });
-    g.add(K.plane(roadW, 520, am, rcx, 0, 200));
+    if (sp.snowy) { const rd = K.road(roadW, 520, {}); K.at(rd, rcx, -0.002, 200); g.add(rd); } else g.add(K.plane(roadW, 520, am, rcx, 0, 200));
     const lm = K.m(P.line, { rough: 0.8 });
     const dashes = new T.Group(); g.add(dashes);
     const dashX = v === 'highway' ? [-1.75, -10.6] : [-1.75];

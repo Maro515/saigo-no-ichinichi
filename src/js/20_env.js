@@ -294,9 +294,9 @@
       rain.userData.seed = Array.from({ length: RN }, () => [Math.random(), Math.random(), Math.random()]);
       this.scene.add(rain); this.particles.rain = rain;
       /* 雪 */
-      const SN = 1100, sp = new Float32Array(SN * 3);
+      const SN = 1800, sp = new Float32Array(SN * 3);
       const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.BufferAttribute(sp, 3));
-      const snow = new T.Points(sg, new T.PointsMaterial({ color: 0xffffff, size: 0.07, transparent: true, opacity: 0.85, depthWrite: false, sizeAttenuation: true }));
+      const snow = new T.Points(sg, new T.PointsMaterial({ color: 0xffffff, size: 0.12, map: SI.Kit.tex.glow(), transparent: true, opacity: 0.95, depthWrite: false, sizeAttenuation: true }));      // ふちのぼけた丸い粒
       snow.frustumCulled = false; snow.userData.noAO = true; snow.visible = false;
       snow.userData.seed = Array.from({ length: SN }, () => [Math.random(), Math.random(), Math.random(), Math.random()]);
       this.scene.add(snow); this.particles.snow = snow;

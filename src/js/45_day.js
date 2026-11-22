@@ -17,7 +17,8 @@
   const FOLK = {
     neighbor: '近所の人', passerby: '通りがかりの人', cook: '店の主人', customer: 'となりの客', coworker: '同僚', worker: '仕事仲間', nurse: '看護師', icunurse: '看護師', carer: '職員', hospicenurse: '看護師', passenger: '乗り合わせた人', child: '子ども', parkgoer: '居合わせた人',
     doctor: '医師', aide: '看護助手', therapist: '理学療法士', cleaner: '清掃の人', homenurse: '訪問看護師', homedoc: '医師', helper: 'ヘルパー', volunteer: 'ボランティアの人',
-    walker: '犬を連れた人', angler: '釣りをしている人', hiker: '山歩きの人', farmer: '畑の人', jogger: '走っている人', boss: '上司', guest: '客', conductor: '車掌'
+    walker: '犬を連れた人', angler: '釣りをしている人', hiker: '山歩きの人', farmer: '畑の人', jogger: '走っている人', boss: '上司', guest: '客', conductor: '車掌',
+    master: '店の主人', clerk: '店の人', shopkeeper: '店の人', barber: '店の人'
   };
   /* 仕事で来る人（ベッドのそばの、決まった立ち位置に来る） */
   const STAFF = { nurse: 1, icunurse: 1, hospicenurse: 1, carer: 1, doctor: 1, aide: 1, therapist: 1, cleaner: 1, homenurse: 1, homedoc: 1, helper: 1, volunteer: 1 };
@@ -458,6 +459,8 @@
         if (k === 'speak') return !this.mute();
         if (k === 'vent') return this.vent();
         if (k === 'notvent') return !this.vent();
+        if (k.startsWith('shop=')) return !!this.app.stage && k.slice(5).split('|').includes(this.app.stage.shopKind);    // 店の種類（38_shop_base.js）
+        if (k.startsWith('fam=')) return !!this.app.stage && k.slice(4).split('|').includes(this.app.stage.shopFam);
         if (k === 'with') return !!(this.app.companion && this.app.companion.visible);
         if (k === 'alone') return !(this.app.companion && this.app.companion.visible);
         if (k === 'young') return life.age < 19;

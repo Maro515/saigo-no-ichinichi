@@ -47,11 +47,11 @@
 
   /* ================= 和室 ================= */
   S.washitsu = function (c) {
-    const g = new T.Group(), sp = K.seasonal(c), lamps = [];
+    const g = new T.Group(), sp = K.seasonal(c), lamps = [], pal = c.pal || {};
     const W = 3.64, D = 3.64, H = 2.4, zS = D / 2;
     const wood = K.m(P.woodDark), woodL = K.mTex(K.tex.rep(K.tex.wood(P.woodLight, 6), 2, 1));
     const tat = K.mTex(K.tex.rep(K.tex.tatami(), 2, 4), { rough: 0.95 });
-    const wall = K.mTex(K.tex.rep(K.tex.noise(P.plaster, 0.07), 3, 2));
+    const wall = K.mTex(K.tex.rep(K.tex.noise(pal.plaster || P.plaster, 0.07), 3, 2));
     g.add(K.room({
       w: W, d: D, h: H, wall, floor: tat, ceil: woodL, frame: wood, base: false,
       openings: [{ side: 'S', at: 0, w: 3.3, y: 0, h: 1.8, kind: 'open' }, { side: 'W', at: 0.55, w: 0.9, y: 0.8, h: 0.95, kind: 'frame' }]

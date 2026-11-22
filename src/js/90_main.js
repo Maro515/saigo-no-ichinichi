@@ -8,9 +8,14 @@
     for (const id of ['title']) U.el(id).hidden = true;
     const c = {
       season: q.get('season') || 'spring', weather: q.get('weather') || 'clear', hour: U.timeToHour(q.get('t') || '10:00'),
-      seed: parseInt(q.get('seed') || '1', 10), v: q.get('v') || null, env, cause: q.get('pas') ? { name: '助手席', place: '' } : null
+      seed: parseInt(q.get('seed') || '1', 10), v: q.get('v') || null, env, cause: q.get('pas') ? { name: '助手席', place: '' } : null, text: q.get('txt') || '', homeKind: q.get('home') || null,
+      life: q.get('age') ? { age: parseInt(q.get('age'), 10), fam: { partner: q.get('alone') ? 'never' : 'with', kids: q.get('kids') ? 1 : 0, grandkids: 0 }, job: { cat: q.get('job') || 'office' }, date: { m: parseInt(q.get('month') || '0', 10) } } : null
     };
+    if (q.get('id') && SI.data) { const cs = SI.data.causes.find(x => x.id === q.get('id')); if (cs) { c.cause = cs; const sc = cs.beats.concat([cs.end]).find(b => b.stage === q.get('stage') && (!c.v || b.v === c.v)); if (sc) { c.v = sc.v || c.v; c.text = ''; c.scene = sc; } } }   // ?stage=shop&id=… でその話の店を見る
+    SI.snowNow = q.get('snow') ? parseFloat(q.get('snow')) : (c.cause && c.cause.beats && SI.snowDepth ? SI.snowDepth(c.cause, { season: c.season, weather: c.weather }) : (c.weather === 'snow' ? 0.22 : 0));      // 雪の深さ（&snow=0.3 で試せる）
     const st = SI.stages[q.get('stage')](c);
+    if (SI.snowNow > 0.01 && SI.Snow) SI.Snow.apply(st, SI.snowNow);
+    if (st.onScene) st.onScene(c.scene || { text: c.text });
     env.setConditions({ hour: c.hour, season: c.season, weather: c.weather, indoor: !!st.indoor });
     env.setStage(st);
     const pos = q.get('pos') || Object.keys(st.anchors)[0];
@@ -187,6 +192,7 @@
     const q = new URLSearchParams(location.search);
     let data = { causes: [], memories: [], last: [] };
     try { data = JSON.parse(U.el('si-data').textContent); } catch (e) { /* データなしでも画面は出す */ }
+    if (SI.assignShops) SI.assignShops(data.causes);          // 店の場面に、語りから決めた店の種類をつける
     SI.data = data;
     const canvas = U.el('gl');
     let env;

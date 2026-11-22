@@ -540,7 +540,7 @@
     const kind = o.kind || 'broad', list = A.ready ? A.trees[kind] : null;
     if (!list || !list.length) return procTree(o);
     const rng = U.rng((o.seed || 1) * 7 + 3), h = o.h || 5;
-    const season = o.season || 'summer', snowy = o.weather === 'snow';
+    const season = o.season || 'summer', snowy = o.weather === 'snow' || SI.snowNow > 0.03;
     const evergreen = (kind === 'pine' || kind === 'conifer');
     let leafC;
     if (evergreen) leafC = kind === 'pine' ? '#44683c' : P.leafDark;
@@ -548,7 +548,6 @@
     else if (season === 'summer') leafC = kind === 'momiji' ? K.mixc(P.leaf, P.leafLight, 0.4) : P.leaf;
     else if (season === 'autumn') leafC = kind === 'momiji' ? P.momiji : (kind === 'ginkgo' ? P.ginkgo : (kind === 'sakura' ? '#b0683a' : K.mixc(P.orange, P.leaf, 0.45)));
     else leafC = null;
-    if (snowy && leafC) leafC = K.mixc(leafC, P.snow, 0.5);
     const g = new T.Group();
     const node = list[Math.floor(rng() * list.length) % list.length].clone(true);
     const barkM = K.m(kind === 'sakura' ? '#5a4a42' : (kind === 'pine' ? '#55402f' : K.shade(P.trunk, 1.2)), { rough: 0.95 });
@@ -567,6 +566,7 @@
     node.rotation.y = rng() * Math.PI * 2;
     node.position.set(0, 0, 0);
     g.add(node);
+    if (snowy && K.snowTint) { g.updateMatrixWorld(true); node.traverse(m => { if (!m.isMesh || !m.visible) return; if (/_leaf$/.test(m.name)) K.snowTint(m, leafC ? K.shade(leafC, 0.95) : P.leafDark, 0.15); else if (/_twig$/.test(m.name)) K.snowTint(m, P.trunk, 0.1); else K.snowTint(m, kind === 'sakura' ? '#5a4a42' : '#55402f', 0.55); }); }   // 枝と葉の上に積もった雪
     g.userData.foliage = (leafMesh && leafMesh.visible) ? leafMesh : null;
     return g;
   };

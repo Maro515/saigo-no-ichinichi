@@ -104,11 +104,13 @@
     }
 
     setStage(id, v, cond) {
-      const key = id + '|' + (v || '') + '|' + cond.season + cond.weather + cond.seed;
+      const key = id + '|' + (v || '') + '|' + cond.season + cond.weather + cond.seed + '|' + (cond.snow || 0);
       const hour = cond.hour;
       if (key !== this.stageKey) {
         const fn = SI.stages[id] || SI.stages.washitsu;
+        SI.snowNow = cond.snow || 0;                                                // 雪の深さ（23b_snow.js）。組み立てのあいだ、地面・道・家・木が見る
         const st = fn({ season: cond.season, weather: cond.weather, hour, seed: cond.seed, v: v || null, env: this.env, life: this.life, cause: this.cause });
+        if (SI.snowNow > 0.01 && SI.Snow) SI.Snow.apply(st, SI.snowNow);
         this.env.setConditions({ hour, season: cond.season, weather: cond.weather, indoor: !!st.indoor });
         this.env.setStage(st);
         this.stage = st; this.stageKey = key;
@@ -155,6 +157,7 @@
       const seed = this.q.get('seed') ? parseInt(this.q.get('seed'), 10) : ((Date.now() ^ U.hash(cause.id)) >>> 0);
       const r = this.r = U.rng(seed);
       const life = this.life = L.make(cause, r); this.cause = cause;
+      this.snowDepth = SI.snowDepth ? SI.snowDepth(cause, life) : 0;          // 雪が積もっている日なら、その深さ
       const recentM = U.store.get('si.recentMem', []);
       const mems = L.pickMemories(life, this.data.memories, r, recentM);
       U.store.set('si.recentMem', recentM.concat(mems.map(m => m.id)).slice(-150));
@@ -203,7 +206,8 @@
       o = o || {};
       const life = this.life, ui = this.ui, rig = this.rig;
       this.clearObjs(); this.usedSpots = [];
-      const st = this.setStage(b.stage, b.v, { season: life.season, weather: life.weather, hour: U.timeToHour(b.t), seed: this.sceneSeed });
+      const st = this.setStage(b.stage, b.v, { season: life.season, weather: life.weather, hour: U.timeToHour(b.t), seed: this.sceneSeed, snow: this.snowDepth || 0 });
+      if (st.onScene) st.onScene(b);                                              // 場面ごとの直し（店のスリッパの数、シャッターなど）
       if (st.walk && !st.nav && SI.Nav) st.nav = new SI.Nav(st);                 // 歩ける範囲（人を置く前に調べる）
       const a = (place && b.pos === 'walk' && st.anchors.walkEnd) ? st.anchors.walkEnd : SI.pickAnchor(st, b.pos);
       rig.setAnchor(a); this.anchor = a;

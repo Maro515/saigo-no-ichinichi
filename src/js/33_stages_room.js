@@ -44,12 +44,12 @@
 
   /* ================= 居間と台所 ================= */
   S.living = function (c) {
-    const g = new T.Group(), lamps = [], fills = [], rng = U.rng(c.seed + 2);
+    const g = new T.Group(), lamps = [], fills = [], rng = U.rng(c.seed + 2), pal = c.pal || {};          // pal: 家ごとの色（39b_home_vary.js）
     const W = 5.4, D = 4.6, H = 2.4, zS = D / 2;
-    const floor = K.mTex(K.tex.rep(K.tex.wood(P.woodLight, 6), 3, 3), { rough: 0.7 });
-    const wall = K.mTex(K.tex.rep(K.tex.noise(P.wallWarm, 0.05), 4, 2));
+    const floor = K.mTex(K.tex.rep(K.tex.wood(pal.floor || P.woodLight, 6), 3, 3), { rough: 0.7 });
+    const wall = K.mTex(K.tex.rep(K.tex.noise(pal.wall || P.wallWarm, 0.05), 4, 2));
     g.add(K.room({ w: W, d: D, h: H, wall, floor, openings: [{ side: 'S', at: 0.9, w: 2.6, y: 0, h: 2.0, kind: 'window' }, { side: 'W', at: -1.0, w: 0.9, y: 1.0, h: 0.8, kind: 'window' }] }));
-    for (const sx of [-1, 1]) { const cu = K.curtain(0.45, 2.05, U.pick(rng, [P.beige, '#c9d2c4', '#d5c7c7'])); K.at(cu, 0.9 + sx * 1.5, 0.02, zS - 0.09); g.add(cu); }
+    const curC = pal.curtain || U.pick(rng, [P.beige, '#c9d2c4', '#d5c7c7']); for (const sx of [-1, 1]) { const cu = K.curtain(0.45, 2.05, curC); K.at(cu, 0.9 + sx * 1.5, 0.02, zS - 0.09); g.add(cu); }
     g.add(K.box(3.4, 0.04, 0.05, K.m(P.woodDark), 0.9, 2.1, zS - 0.09));
     /* 台所 */
     const kit = K.kitchen(2.3); K.at(kit, -1.3, 0, -zS + 0.31); g.add(kit);
@@ -58,7 +58,7 @@
     const kettle = K.cyl(0.08, 0.16, K.m(P.steel, { metal: 0.6, rough: 0.35 }), -0.75, 0.86, -zS + 0.32, { rTop: 0.06 }); g.add(kettle);
     /* 食卓 */
     const tx = -0.9, tz = -0.25;
-    const tbl = K.table(1.3, 0.8, 0.7, K.mTex(K.tex.rep(K.tex.wood(P.wood, 4), 1, 1))); K.at(tbl, tx, 0, tz); g.add(tbl);
+    const tbl = K.table(1.3, 0.8, 0.7, K.mTex(K.tex.rep(K.tex.wood(pal.wood || P.wood, 4), 1, 1))); K.at(tbl, tx, 0, tz); g.add(tbl);
     const chairs = [[tx - 0.25, tz - 0.68, 0], [tx + 0.3, tz - 0.68, 0], [tx - 0.25, tz + 0.68, PI], [tx + 0.3, tz + 0.68, PI]];
     for (const ch of chairs) { const x = K.chair(K.m(P.wood)); K.at(x, ch[0], 0, ch[1], ch[2]); g.add(x); }
     const cup = K.cup(P.offwhite); K.at(cup, tx - 0.1, 0.7, tz - 0.2); g.add(cup);
@@ -70,10 +70,12 @@
     /* テレビとソファ */
     const tvb = K.cabinet(1.3, 0.42, 0.4, K.m(P.woodDark)); K.at(tvb, W / 2 - 0.24, 0, 0.8, -PI / 2); g.add(tvb);
     const tv = K.tv(0.95); K.at(tv, W / 2 - 0.26, 0.42, 0.8, -PI / 2); g.add(tv);
-    const sofa = K.sofa(U.pick(rng, [P.cloth, '#8f9a8a', '#9a8f9c', '#7f8c99'])); K.at(sofa, 0.55, 0, 0.9, PI / 2); g.add(sofa);
-    const rug = K.rug(1.6, 1.9, U.pick(rng, ['#b5a58c', '#a8b0a8', '#b49a92'])); K.at(rug, 1.55, 0, 0.85); g.add(rug);
-    const lt = K.table(0.9, 0.5, 0.36, K.m(P.woodDark)); K.at(lt, 1.55, 0, 0.85, PI / 2); g.add(lt);
-    const remote = K.box(0.05, 0.02, 0.16, K.m(P.black), 1.5, 0.36, 0.7); g.add(remote);
+    const sofa = K.sofa(pal.sofa || U.pick(rng, [P.cloth, '#8f9a8a', '#9a8f9c', '#7f8c99'])); K.at(sofa, 0.55, 0, 0.9, PI / 2); g.add(sofa);
+    const rug = K.rug(1.6, 1.9, pal.rug || U.pick(rng, ['#b5a58c', '#a8b0a8', '#b49a92'])); K.at(rug, 1.55, 0, 0.85); g.add(rug);
+    if (!c.noLowTable) {                                                   // こたつを置く家（39b_home_vary.js）では出さない
+      const lt = K.table(0.9, 0.5, 0.36, K.m(P.woodDark)); K.at(lt, 1.55, 0, 0.85, PI / 2); g.add(lt);
+      const remote = K.box(0.05, 0.02, 0.16, K.m(P.black), 1.5, 0.36, 0.7); g.add(remote);
+    }
     /* 棚、写真、時計、暦 */
     const sh = K.shelf(0.9, 1.5, 0.3, K.m(P.wood), 4); K.at(sh, -W / 2 + 0.17, 0, 1.25, PI / 2); g.add(sh);
     const bk = K.books(0.75, 0.24, c.seed); K.at(bk, -W / 2 + 0.17, 0.4, 1.25, PI / 2); g.add(bk);
@@ -128,12 +130,12 @@
 
   /* ================= 寝室 ================= */
   S.bedroom = function (c) {
-    const g = new T.Group(), lamps = [], fills = [], rng = U.rng(c.seed + 3);
+    const g = new T.Group(), lamps = [], fills = [], rng = U.rng(c.seed + 3), pal = c.pal || {};
     const W = 3.6, D = 4.0, H = 2.4, zS = D / 2;
-    const floor = K.mTex(K.tex.rep(K.tex.wood(P.wood, 6), 2, 3), { rough: 0.75 });
-    const wall = K.mTex(K.tex.rep(K.tex.noise(U.pick(rng, [P.wallWarm, P.wallCool, '#e6ddd4']), 0.05), 3, 2));
+    const floor = K.mTex(K.tex.rep(K.tex.wood(pal.floor || P.wood, 6), 2, 3), { rough: 0.75 });
+    const wall = K.mTex(K.tex.rep(K.tex.noise(pal.wall || U.pick(rng, [P.wallWarm, P.wallCool, '#e6ddd4']), 0.05), 3, 2));
     g.add(K.room({ w: W, d: D, h: H, wall, floor, openings: [{ side: 'S', at: 0.35, w: 1.7, y: 0.85, h: 1.15, kind: 'window' }] }));
-    const cc = U.pick(rng, ['#c9c1b0', '#aebbc4', '#c4b3b3', '#b5c0ae']);
+    const cc = pal.curtain || U.pick(rng, ['#c9c1b0', '#aebbc4', '#c4b3b3', '#b5c0ae']);
     for (const sx of [-1, 1]) { const cu = K.curtain(0.42, 1.5, cc); K.at(cu, 0.35 + sx * 1.02, 0.62, zS - 0.09); g.add(cu); }
     g.add(K.box(2.5, 0.04, 0.05, K.m(P.woodDark), 0.35, 2.12, zS - 0.09));
     const bx = -0.65, bz = -0.9;
@@ -156,7 +158,7 @@
     const slp = K.slippers('#b9b3a6'); K.at(slp, 0.0, 0, -0.4, PI / 2); g.add(slp);
     S.fill(g, fills, 0.35, 2.2, zS - 0.9, 8, 8);
     S.neighborhood(g, c, zS, -3.0, lamps);
-    const blanket = U.pick(rng, [P.blanket, P.blanketWarm, '#b8c4b4', '#c9b9c4']);
+    const blanket = pal.blanket || U.pick(rng, [P.blanket, P.blanketWarm, '#b8c4b4', '#c9b9c4']);
     return {
       group: g, indoor: true, label: '自宅の寝室', shadow: 9, center: [0, 0, 1],
       anchors: {
@@ -183,9 +185,9 @@
 
   /* ================= 浴室 ================= */
   S.bath = function (c) {
-    const g = new T.Group(), lamps = [], fills = [];
+    const g = new T.Group(), lamps = [], fills = [], pal = c.pal || {};
     const W = 1.9, D = 2.5, H = 2.2, zS = D / 2;
-    const tile = K.mTex(K.tex.rep(K.tex.tile(P.tile, 4), 3, 3), { rough: 0.35 });
+    const tile = K.mTex(K.tex.rep(K.tex.tile(pal.tile || P.tile, 4), 3, 3), { rough: 0.35 });
     const ftile = K.mTex(K.tex.rep(K.tex.tile('#c9d2d2', 4), 2.5, 3), { rough: 0.5 });
     g.add(K.room({ w: W, d: D, h: H, wall: tile, floor: ftile, ceil: K.m(P.white, { rough: 0.5 }), base: false, openings: [] }));
     /* 浴槽（−X 側） */

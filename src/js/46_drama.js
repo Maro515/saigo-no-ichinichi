@@ -228,6 +228,8 @@
         if (k === 'alone') return !b.with;
         if (k === 'weekday') return (life.date.d % 7) < 5;
         if (k === 'meal') return (h >= 8 && h < 9) || (h >= 12.3 && h < 13.3) || (h >= 18.3 && h < 19.3);
+        if (k.startsWith('shop=')) return !!this.app.stage && k.slice(5).split('|').includes(this.app.stage.shopKind);    // 店の種類（38_shop_base.js）
+        if (k.startsWith('fam=')) return !!this.app.stage && k.slice(4).split('|').includes(this.app.stage.shopFam);
         return false;                                   // このほかの語（寝ついている、など）がつく台詞は、ドラマでは使わない
       });
     }

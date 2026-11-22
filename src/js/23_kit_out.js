@@ -5,7 +5,7 @@
 
   /* 季節と天気で変わる色 */
   K.seasonal = function (c) {
-    const s = c.season, snowy = c.weather === 'snow';
+    const s = c.season, snowy = c.weather === 'snow' || SI.snowNow > 0.03;     // 雪が積もっている日（23b_snow.js）
     return {
       snowy,
       grass: snowy ? P.snow : (s === 'winter' ? P.grassWinter : (s === 'autumn' ? K.mixc(P.grass, P.grassDry, 0.55) : (s === 'spring' ? K.mixc(P.grass, P.leafLight, 0.35) : P.grass))),
@@ -61,7 +61,7 @@
   K.tree = function (o) {
     o = o || {};
     const g = new T.Group(), rng = U.rng(o.seed || 1), h = o.h || 5, kind = o.kind || 'broad';
-    const season = o.season || 'summer', snowy = o.weather === 'snow';
+    const season = o.season || 'summer', snowy = o.weather === 'snow' || SI.snowNow > 0.03;
     const trunkM = K.m(kind === 'sakura' ? '#4a3b33' : P.trunk, { flat: true });
     const evergreen = (kind === 'pine' || kind === 'conifer');
     if (kind === 'conifer') {
@@ -301,7 +301,7 @@
       g.add(K.box(0.3, 0.12, 0.03, tl, sx * (W / 2 - 0.25), clear + 0.42, -L / 2 - 0.005, { noShadow: true }));
     }
     g.userData.setLamp = (v) => { hl.emissiveIntensity = v * 3; tl.emissiveIntensity = v * 1.6; };
-    g.userData.len = L; g.userData.wid = W;
+    g.userData.len = L; g.userData.wid = W; g.userData.dyn = true;          // 動く物（雪はこの車と一緒に動かす）
     return g;
   };
   K.bicycle = function () {

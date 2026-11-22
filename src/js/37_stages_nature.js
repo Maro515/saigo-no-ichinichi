@@ -305,7 +305,7 @@
     const g = new T.Group(), lamps = [], rng = U.rng(c.seed + 45), sp = K.seasonal(c);
     const sea = K.water(600, 600, '#24607c', { segX: 90, segZ: 90, amp: 0.3, opacity: 0.97, rough: 0.25, flat: true }); sea.position.set(0, 0, 60); g.add(sea);
     const tint = skyWater(sea, '#24607c');
-    const bt = new T.Group(); g.add(bt);
+    const bt = new T.Group(); g.add(bt); bt.userData.dyn = true;
     const wm = K.m(P.white, { rough: 0.5 }), dkm = K.mTex(K.tex.rep(K.tex.wood('#b9ab94', 8), 1, 3), { rough: 0.8 });
     bt.add(K.box(2.9, 1.0, 7.6, wm, 0, -0.35, 0)); bt.add(K.plane(2.6, 7.4, dkm, 0, 0.66, 0));
     const bow = K.box(2.05, 1.0, 2.05, wm, 0, -0.35, 4.6); bow.rotation.y = PI / 4; bow.scale.set(1, 1, 1.25); bt.add(bow);

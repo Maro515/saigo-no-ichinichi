@@ -1,5 +1,5 @@
 'use strict';
-/* 最期の一日 — 場所（働く場所と店）: 事務室、店、工事現場・工場 */
+/* 最期の一日 — 場所（働く場所）: 事務室、工事現場・工場 */
 (function (SI) {
   const T = window.THREE, U = SI.U, K = SI.Kit, P = K.P;
   const S = SI.stages;
@@ -83,83 +83,7 @@
     };
   };
 
-  /* ================= 飲食店・商店 ================= */
-  S.shop = function (c) {
-    const g = new T.Group(), lamps = [], fills = [], rng = U.rng(c.seed + 22), people = [];
-    const W = 5.2, D = 6.4, H = 2.5, zS = D / 2;
-    const floor = K.mTex(K.tex.rep(K.tex.tile('#8f867a', 4), 3, 4), { rough: 0.8 });
-    const wall = K.mTex(K.tex.rep(K.tex.noise('#e2d9c6', 0.06), 3, 2));
-    const wood = K.m(P.woodDark), woodM = K.mTex(K.tex.rep(K.tex.wood(P.wood, 4), 2, 1));
-    g.add(K.room({ w: W, d: D, h: H, wall, floor, ceil: K.m('#e6dfd0'), frame: wood,
-      openings: [{ side: 'S', at: -0.9, w: 1.7, y: 0, h: 2.0, kind: 'window' }, { side: 'S', at: 1.4, w: 1.6, y: 0.9, h: 1.0, kind: 'window' }] }));
-    /* のれん */
-    const nc = U.pick(rng, ['#2f3b55', '#7a2f2a', '#3f5a48', '#e6dfd0']);
-    for (let i = 0; i < 4; i++) g.add(K.box(0.39, 0.42, 0.012, K.m(nc, { double: true }), -1.5 + i * 0.41, 1.55, zS + 0.16));
-    g.add(K.rod([-1.75, 1.98, zS + 0.16], [-0.05, 1.98, zS + 0.16], 0.012, wood));
-    /* カウンターと厨房 */
-    const cx = -W / 2 + 1.25;
-    g.add(K.box(0.5, 1.0, 3.6, woodM, cx, 0, -0.9)); g.add(K.box(0.62, 0.05, 3.7, K.m(P.woodLight, { rough: 0.5 }), cx + 0.03, 1.0, -0.9));
-    for (let i = 0; i < 4; i++) { const st = K.stool(K.m(P.steelDark), 0.62); K.at(st, cx + 0.62, 0, -2.2 + i * 0.85); g.add(st); }
-    g.add(K.box(0.5, 0.86, 3.4, K.m(P.steel, { metal: 0.5, rough: 0.4 }), -W / 2 + 0.3, 0, -0.9));
-    const sh = K.shelf(3.0, 0.9, 0.24, wood, 2); K.at(sh, -W / 2 + 0.14, 1.35, -0.9, PI / 2); g.add(sh);
-    for (let i = 0; i < 12; i++) g.add(K.cyl(0.035, 0.2 + (i % 3) * 0.04, K.m(['#6b8f6a', '#8a5a3c', '#c9c2a6', '#3d4a5c'][i % 4], { rough: 0.3 }), -W / 2 + 0.16, 1.38 + (i % 2) * 0.44, -2.2 + i * 0.23, { seg: 8 }));
-    const pot = K.cyl(0.18, 0.2, K.m(P.steel, { metal: 0.6, rough: 0.35 }), -W / 2 + 0.32, 0.86, -1.6); g.add(pot);
-    const cook = K.figure({ pose: 'stand', top: '#eceae4', bottom: '#3d4352', hair: P.hairGray, h: 1.62 }); K.at(cook, -W / 2 + 0.72, 0, -0.5, 1.3); g.add(cook); people.push(cook);
-    /* 卓 */
-    const tables = [[1.3, -1.6], [1.3, 0.4], [1.3, 2.1]];
-    tables.forEach((t, i) => {
-      const tb = K.table(0.75, 0.75, 0.7, woodM); K.at(tb, t[0], 0, t[1]); g.add(tb);
-      for (const sz of [-1, 1]) { const ch = K.chair(K.m(P.wood)); K.at(ch, t[0], 0, t[1] + sz * 0.62, sz > 0 ? PI : 0); g.add(ch); }
-      const cup = K.cup(P.offwhite, 0.08); K.at(cup, t[0] - 0.15, 0.7, t[1] - 0.1); g.add(cup);
-      g.add(K.box(0.1, 0.12, 0.06, K.m(P.woodDark), t[0] + 0.25, 0.7, t[1] - 0.25));
-      if (i === 2) {
-        const f = K.figure({ pose: 'sit', seat: 0.44, top: U.pick(rng, ['#8c6f5e', '#6f7f8c', '#9a8f7a']), bottom: '#4a4640', hair: U.pick(rng, [P.hair, P.hairGray]) }); K.at(f, t[0], 0, t[1] + 0.6, PI); g.add(f); people.push(f);
-      }
-    });
-    /* 品書き、テレビ、暦 */
-    for (let i = 0; i < 7; i++) g.add(K.box(0.012, 0.42, 0.11, K.m(P.paper), W / 2 - 0.012, 1.5, -2.6 + i * 0.2, { noShadow: true }));
-    const tv = K.tv(0.6); K.at(tv, W / 2 - 0.3, 1.75, -zS + 0.3, -0.7); g.add(tv);
-    const cal = K.calendar(); K.at(cal, W / 2 - 0.02, 1.2, 1.3, -PI / 2); g.add(cal);
-    const clock = K.wallClock(c.hour); K.at(clock, 0.6, 2.1, -zS + 0.04, 0); g.add(clock);
-    for (const p of [[cx + 0.4, -1.8], [cx + 0.4, 0.1], [1.3, -1.6], [1.3, 0.4], [1.3, 2.1]]) {
-      const l = K.standLamp(); l.rotation.x = PI; K.at(l, p[0], H - 0.25, p[1]); l.userData.power = 3.2; g.add(l); lamps.push(l);
-      g.add(K.rod([p[0], H, p[1]], [p[0], H - 0.3, p[1]], 0.005, K.m(P.dark), { noCast: true }));
-    }
-    S.fill(g, fills, -0.9, 2.2, zS - 0.9, 9, 8); S.fill(g, fills, 1.4, 2.2, zS - 0.9, 5, 6);
-    /* 外の通り */
-    const sp = K.seasonal(c);
-    const rd = K.road(7, 80, { wet: c.weather === 'rain' || c.weather === 'storm' }); rd.rotation.y = PI / 2; K.at(rd, 0, -0.05, zS + 6); g.add(rd);
-    g.add(K.box(80, 0.12, 2.2, K.m(P.concrete), 0, -0.14, zS + 1.3));
-    const cols = ['#b9b6ad', '#a9adb2', '#c4bcae', '#bdb3a6'];
-    for (let i = 0; i < 6; i++) { const b = K.building(7 + rng() * 4, 7 + rng() * 9, 8, U.pick(rng, cols), c.seed + i); K.at(b, -26 + i * 10.5, -0.05, zS + 14.5); g.add(b); lamps.push(b); }
-    const pole = K.pole(8); K.at(pole, 3.4, -0.05, zS + 2.2); g.add(pole);
-    const vm = K.vending(); K.at(vm, -3.3, -0.05, zS + 10.2, PI); g.add(vm); lamps.push(vm);
-    const scr = tv.userData.screen.material;
-    return {
-      group: g, indoor: true, label: '店の中', shadow: 11, center: [0, 0, 2],
-      anchors: {
-        sit: { p: [1.3, 1.15, -1.02], look: [-0.6, 1.0, zS], lim: { yaw: 150, up: 55, down: 60 }, body: 'sit' },
-        stand: { p: [0.2, 1.52, 2.1], look: [-0.9, 1.1, -1.8], lim: { yaw: 160, up: 55, down: 55 }, body: 'stand' },
-        lie: { p: [0.2, 0.26, 0.6], look: [-0.3, 1.3, 2.8], lim: { yaw: 110, up: 75, down: 12 }, body: 'none', ground: 0 }
-      },
-      body: { sit: { sleeve: '#7d8794', legs: '#4a4f5c' }, stand: { sleeve: '#7d8794' } },
-      spots: [[-0.9, 1.3, zS + 0.2], [1.4, 1.4, zS - 0.1], [cx + 0.1, 1.2, -0.3], [-W / 2 + 0.2, 1.6, -1.2], [1.3, 0.85, 0.4], [W / 2 - 0.1, 1.5, -2.0], [W / 2 - 0.3, 1.9, -zS + 0.4], [0.6, 2.1, -zS + 0.1]],
-      spotNames: ['のれん', '窓の外の通り', 'カウンター', '棚に並んだ瓶', '卓の湯のみ', '壁の品書き', 'テレビ', '壁の時計'],
-      walk: { y: 0, rects: [[-W / 2, -zS, W / 2, zS]], start: [0.45, -1.0] },
-      folk: people.map((f, i) => ({ f, role: i ? 'customer' : 'cook' })),      // people の先頭が主人
-      companion: { sit: { p: [1.3, 0, -1.0 + -0.0], ry: 0, pose: 'sit', seat: 0.44 }, stand: { p: [-0.3, 0, 1.3], ry: 0.6, pose: 'stand' } },
-      weatherBox: [[-12, -0.1, zS + 0.4], [12, 9, zS + 13]], dustBox: [[-1.8, 0.4, 1.2], [0.4, 2.0, zS]],
-      fills, amb: { crowd: 0.5, traffic: 0.35, tick: 0.4 },
-      onLight(env) {
-        for (const l of lamps) if (l.userData.setLamp) l.userData.setLamp(l.userData.power === 3.2 ? Math.max(0.5, env.lampOn) : env.lampOn, l.userData.power);
-        clock.userData.setTime(env.hour); scr.emissiveIntensity = 0.4;
-      },
-      update(dt, env) { scr.emissiveIntensity = 0.38 + Math.sin(env.time * 2.9) * 0.09; for (const p of people) p.userData.tick(env.time); }
-    };
-  };
-  /* 席に着いたとき、向かいの椅子に連れが座る */
-  const shop0 = S.shop;
-  S.shop = function (c) { const st = shop0(c); st.companion.sit = { p: [1.3, 0, -1.02 + 1.24], ry: PI, pose: 'sit', seat: 0.44 }; return st; };
+  /* 店（飲食店・商店）は 38_shop_base.js と 39_shop_kinds.js で、種類ごとに作り分ける */
 
   /* ================= 工事現場・工場 ================= */
   S.worksite = function (c) {
