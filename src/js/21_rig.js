@@ -176,7 +176,8 @@
         let ix = 0, iy = 0;
         if (this.enabled && !fr.locked) {
           const k = this.keys;
-          ix = this.stick.x + (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0); iy = this.stick.y + (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
+          const kk = this.autoWalk ? 0 : 1;                           // ドラマで見るときは、キーでは歩かない
+          ix = this.stick.x + kk * ((k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0)); iy = this.stick.y + kk * ((k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0));
           const len = Math.hypot(ix, iy); if (len > 1) { ix /= len; iy /= len; }
         }
         const yaw = this.baseYaw + this.uYaw, sp = fr.speed * (iy < 0 ? 0.6 : 1);

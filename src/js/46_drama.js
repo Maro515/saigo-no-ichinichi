@@ -1,7 +1,7 @@
 'use strict';
 /* 最期の一日 — ドラマで見る。
    その人の最期の日を、映画のように流れる場面のつながりで見せる。操作はいらない（見まわすことはできる）。
-   - はじめに、最期の時刻と場所を先に見せる（「この日の十九時四十分、自宅の浴室」→「十二時間前」）。
+   - はじめに、最期の時刻と場所を先に見せる（「この日の午後7時40分、自宅の浴室」→「12時間前」）。
    - 場面ごとに、左上へ時刻・場所・「最期まで、あと何時間」を出す。上下には黒い帯。
    - 場面のなかでは、カメラがゆっくり振れて、少しずつ寄っていく。そばの人とのやり取り、まわりの音、思い出がはさまる。
    - 同じ場所のまま時間がたつときは早回し（日ざしと時計が動く）、場所が変わるときは暗転でつなぐ。
@@ -20,7 +20,7 @@
       this.endB = dying.scene();
       this.T = this.timeline();                        // beats 3 つと最期の時刻（分。日付をまたぐと 1440 を超える）
       this.camGen = 0; this.used = new Set(); this.zoomK = 1; this.running = false;
-      this.stat = { scene: 0, talk: 0, amb: 0, mem: 0, lapse: 0, cut: 0 };
+      this.stat = { scene: 0, talk: 0, amb: 0, mem: 0, lapse: 0, cut: 0, walkIn: 0, sit: 0, rise: 0, walk: 0, act: 0, blow: 0, out: 0, come: 0, hold: 0, put: 0, crouch: 0 };
     }
     timeline() {
       const bs = this.cause.beats, out = []; let prev = -1, add = 0;
@@ -32,20 +32,22 @@
       min = Math.max(0, Math.round(min));
       const h = Math.floor(min / 60), m = min % 60;
       if (!h && !m) return '';
-      return '最期まで、あと' + (h ? U.kanji(h) + '時間' : '') + (m ? U.kanji(m) + '分' : '');
+      return '最期まで、あと' + (h ? h + '時間' : '') + (m ? m + '分' : '');
     }
-    ago(min) { const h = Math.round(min / 60); return h >= 1 ? U.kanji(h) + '時間前' : U.kanji(Math.max(1, Math.round(min))) + '分前'; }
+    ago(min) { const h = Math.round(min / 60); return h >= 1 ? h + '時間前' : Math.max(1, Math.round(min)) + '分前'; }
 
     async run() {
       const ui = this.ui;
-      this.running = true; this.rig.wasdMove = false;
+      this.running = true; this.rig.wasdMove = false; this.rig.autoWalk = true;     // 歩くのはドラマが決める（キーでは歩かない）
       this.prevAuto = ui.auto; ui.auto = true;          // 流れるように進める（手送りの設定は、終わったら戻す）
       ui.cinema(true);
-      await this.coldOpen();
-      for (let i = 0; i < 3; i++) await this.scene(i);
+      const q = this.app.q, from = this.from = q ? U.clamp(+(q.get('scene') || 0) || 0, 0, 3) : 0;     // 確認用: ?scene=1〜3 で途中の場面から（3 は最期の場所へ移るところ）
+      if (!q || !q.has('scene')) await this.coldOpen();      // ?scene=0 なら、冒頭を飛ばして最初の場面から
+      for (let i = from; i < 3; i++) await this.scene(i);
       await this.toEnd();
     }
     stop() {
+      this.abortMotion(); this.rig.autoWalk = false;
       this.running = false; this.camGen++;
       this.audio.score(false);
       if (this.prevAuto != null) { this.ui.auto = this.prevAuto; this.prevAuto = null; }
@@ -63,32 +65,62 @@
 
     /* ---------- 場面 ---------- */
     async scene(i) {
-      const app = this.app, ui = this.ui, tk = this.tk, bs = this.cause.beats, b = bs[i], prev = i ? bs[i - 1] : null;
+      const app = this.app, ui = this.ui, tk = this.tk, bs = this.cause.beats, b = bs[i], prev = i > (this.from || 0) ? bs[i - 1] : null;
       this.stat.scene++;
       const same = prev && prev.stage === b.stage && (prev.v || '') === (b.v || '');
       if (same) {
+        this.abortMotion(); this.clearPlaced();                         // 時がたつので、前の場面の動きと置いた物は片づける
         await this.lapse(this.T[i - 1], this.T[i], prev);
         await this.reframe(b);
       } else {
         if (ui.lidState !== 'shut') await ui.lids('shut', 900, tk);
-        this.camGen++; this.setZoom(1); this.stat.cut++;
-        await app.enterScene(b, tk, i === 0, null, { noCard: true, before: () => this.establish() });
+        this.camGen++; this.abortMotion(); this.placed = []; this.setZoom(1); this.stat.cut++;
+        /* 目を開ける前に、どこから入るかを決める（歩いて入れる場面は、離れた所に立っている） */
+        await app.enterScene(b, tk, i === 0, null, { noCard: true, before: () => { if (!this.blockIn(b) && b.pos !== 'lie') this.establish(); } });
       }
       if (i === 0) this.audio.score(true);
       ui.telop(U.timeJa(b.t), app.stage.label, this.leftJa(this.T[3] - this.T[i]), 5200);
-      this.zoomTo(0.9, 26000);                          // ゆっくり寄っていく
-      if (same) this.establish(true);
-      for (const sn of U.sentences(L.resolve(b.text, this.life))) await ui.narrate(sn, tk, { force: true });
+      this.zoomTo(0.92, 26000);                         // ゆっくり寄っていく
+      let move = null;
+      if (this.entry) move = this.walkIn();             // 歩いて行って、座る・持ち場に立つ
+      else if (b.pos === 'lie' && !same) move = this.wakeUp();
+      else if (same && !this.rig.free) this.establish(true);
+      if (move) await U.sleep(900, tk);                 // 歩きはじめてから、語りが出る
+      for (const sn of U.sentences(L.resolve(b.text, this.life))) {
+        if ((move || this.mv || this.gl) && this.needsStill(sn)) {           // 人が来る・手に持つ などは、席に着いてから
+          if (move) { await move; move = null; }
+          await this.settle(6000);
+        }
+        this.actFor(sn); await ui.narrate(sn, tk, { force: true });
+        if (this.fw) await this.settleFolk(9000);
+      }
       ui.clearNarr();
+      if (move) await move;
+      if (this.mv) await new Promise(res => { const iv = setInterval(() => { if (!this.mv || !this.running) { clearInterval(iv); res(); } }, 100); });
       if (b.with && app.companion) await this.dialogue(b, i);
       else await this.folkLine(b, i);
       await this.ambient(b, this.T[i]);
       if (i < 2 && this.mems.length) await this.flashback();
+      /* 次が別の場所なら、立ち上がって出口へ歩きだし、その途中で暗転する */
+      const nx = i < 2 ? bs[i + 1] : this.endB;
+      if (!(nx.stage === b.stage && (nx.v || '') === (b.v || ''))) await this.walkOut(b);
     }
     /* 同じ場所で、姿勢が変わる（座っていたのが、立っている、など）。まばたきのあいだに */
     async reframe(b) {
-      const app = this.app, st = app.stage, rig = this.rig, ui = this.ui;
+      const app = this.app, st = app.stage, rig = this.rig, ui = this.ui, nav = st.nav;
       const a = SI.pickAnchor(st, b.pos);
+      /* 歩ける場所では、立ち上がって歩く・歩いて行って座る、を見せる */
+      if (nav && nav.ok && a && !a.path && (b.pos === 'sit' || b.pos === 'stand')) {
+        if (b.pos === 'sit' && app.anchor !== a) { if (!rig.free) await this.standUp(); await this.sitAt(a, true); }
+        else if (b.pos === 'stand') {
+          if (!rig.free) await this.standUp();
+          const ap = nav.nearest(a.p[0], a.p[2], 1.4);
+          if (ap && Math.hypot(ap.x - rig.pos.x, ap.z - rig.pos.z) > 0.5) await this.walkTo(ap.x, ap.z, 10);
+          await this.face(v1.fromArray(a.look).clone(), 1200);
+        }
+        if (!!b.with !== !!app.companion) { await ui.lids('shut', 160, this.tk); app.syncCompanion(b); await ui.lids('open', 300, this.tk); }
+        return;
+      }
       if (app.anchor !== a) {
         await ui.lids('shut', 280, this.tk);
         this.camGen++;
@@ -109,7 +141,7 @@
       for (;;) {
         const k = Math.min(1, (performance.now() - t0) / dur), m = from + (to - from) * U.smooth(k);
         env.setConditions({ hour: (m / 60) % 24 });
-        ui.telopTime(U.minToTime(Math.floor(m % 1440)));
+        ui.telopTime(U.timeJa(U.minToTime(Math.floor(m % 1440))));      // 早回しのあいだも、同じ書き方で
         for (let j = 0; j < (this.dd.world || []).length; j++) {
           const w = this.dd.world[j]; let wm = U.timeToMin(w.t); while (wm < from) wm += 1440;
           if (wm <= m && wm > from && !fired.has(j) && w.in.includes(b.stage) && w.snd && this.audio[w.snd]) { fired.add(j); this.audio[w.snd](w.arg); }
@@ -139,7 +171,7 @@
     }
     /* point のほうへ、ms かけて向く。null なら正面へ戻る。前の動きは打ち切る */
     look(point, ms) {
-      const gen = ++this.camGen, rig = this.rig, y0 = rig.tYaw, p0 = rig.tPitch;
+      const gen = ++this.camGen, rig = this.rig, y0 = rig.tYaw, p0 = rig.tPitch, b0 = rig.baseYaw;
       let y1 = 0, p1 = 0;
       if (point) { rig.lookToward(point); y1 = rig.tYaw; p1 = rig.tPitch; rig.tYaw = y0; rig.tPitch = p0; }
       const dur = Math.max(1, ms / U.speed), t0 = performance.now();
@@ -147,7 +179,7 @@
         for (;;) {
           if (gen !== this.camGen || this.tk.aborted || !this.running) return false;      // 打ち切られた
           const k = Math.min(1, (performance.now() - t0) / dur), e = U.smooth(k);
-          rig.tYaw = y0 + (y1 - y0) * e; rig.tPitch = p0 + (p1 - p0) * e;
+          rig.tYaw = y0 + (y1 - y0) * e - (rig.baseYaw - b0); rig.tPitch = p0 + (p1 - p0) * e;     // 歩いているとき、体が向きを追ってくる分（21_rig.js の fold）を差し引く
           if (k >= 1) return true;
           try { await U.sleep(33, this.tk); } catch (err) { return false; }
         }
@@ -272,12 +304,15 @@
     /* ---------- 最期の時刻へ ---------- */
     async toEnd() {
       const app = this.app, ui = this.ui, rig = this.rig, tk = this.tk, e = this.endB, c = this.cause, last = this.cause.beats[2];
-      const same = last.stage === e.stage && (last.v || '') === (e.v || '');
+      const same = this.from !== 3 && last.stage === e.stage && (last.v || '') === (e.v || '');
+      let move = null;
       this.audio.score(false);                          // 音楽を落とす。鼓動だけが残る
       if (same) {
+        this.abortMotion(); this.clearPlaced();
         await this.lapse(this.T[2], this.T[3], last);
         const st = app.stage, a = (e.pos === 'walk' && st.anchors.walkEnd) ? st.anchors.walkEnd : SI.pickAnchor(st, e.pos);
-        if (app.anchor !== a || !!e.with !== !!app.companion) {
+        if (st.nav && st.nav.ok && !a.path && (e.pos === 'sit' || e.pos === 'stand')) await this.reframe(e);
+        else if (app.anchor !== a || !!e.with !== !!app.companion) {
           await ui.lids('shut', 300, tk);
           rig.setAnchor(a); rig.setBody(app.makeBody(st, a)); app.anchor = a; app.syncCompanion(e);
           await U.sleep(120, tk); await ui.lids('open', 600, tk);
@@ -285,18 +320,19 @@
         this.env.setConditions({ hour: U.timeToHour(e.t) });
       } else {
         if (ui.lidState !== 'shut') await ui.lids('shut', 900, tk);
-        this.camGen++; this.setZoom(1);
-        await app.enterScene(e, tk, false, c.place, { noCard: true });      // 最期の場面は、正面から
+        this.camGen++; this.abortMotion(); this.placed = []; this.setZoom(1);
+        await app.enterScene(e, tk, false, c.place, { noCard: true, before: () => this.blockIn(e) });
+        if (this.entry) move = this.walkIn();            // 最期の場所へ、歩いて入る（テロップと同時に）
       }
       ui.hud(true, e.t, c.place);
       ui.telop(U.timeJa(e.t), c.place, '', 4200);
       this.audio.heart(74, 0.16, 0); this.audio.breath(14, 0);
       this.zoomTo(0.86, 9000);
-      await this.look(null, 1500);
-      await U.sleep(2400, tk);
-      rig.tYaw = 0; rig.tPitch = 0;
-      this.running = false;                             // ここからは、最期の場面がカメラを動かす
-      this.camGen++; this._zg = (this._zg || 0) + 1;
+      if (move) await move;
+      if (!rig.free) await this.look(null, 1500);
+      this.endYaw = rig.viewYaw();                      // 迫ってくるものの右・左は、この向きから決める
+      await U.sleep(1800, tk);
+      this._zg = (this._zg || 0) + 1;                 // 寄るのはここまで。このあと、異変の前の行では、まだ視点が動く（47_blocking.js の endCue。異変が来たら endHit で止める）
     }
   }
 

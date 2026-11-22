@@ -18,7 +18,8 @@ JOBS = {'office', 'construction', 'factory', 'farm', 'fishery', 'forestry', 'dri
         'shop', 'public', 'art', 'home', 'student'}
 TOP_KEYS = {'id', 'cat', 'group', 'name', 'place', 'age', 'sex', 'season', 'weather', 'aware', 'job', 'beats', 'end', 'note', 'mute', 'bound'}
 BEAT_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'text', 'bound'}
-END_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'fx', 'lines', 'hit', 'state'}
+END_KEYS = {'t', 'stage', 'pos', 'v', 'with', 'fx', 'lines', 'hit', 'state', 'see'}
+SEES = {'car', 'car-R', 'car-L', 'car-F', 'man'}
 STATES = {'vent', 'still', 'choke', 'quiet', 'arrest', 'weak', 'brady'}
 PH = re.compile(r'\{([^}]*)\}')
 TIME = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
@@ -51,6 +52,8 @@ def check_scene(e, sc, where, is_end, err):
             err(f'{where}: v が不正: {st}/{sc["v"]}')
     if 'with' in sc and sc['with'] is not True:
         err(f'{where}: with は true のときだけ書く')
+    if 'see' in sc and sc['see'] not in SEES:
+        err(f'{where}: see は ' + ' / '.join(sorted(SEES)))
     if 'state' in sc and (not isinstance(sc['state'], list) or not sc['state'] or any(x not in STATES for x in sc['state'])):
         err(f'{where}: state が不正: {sc["state"]}')
     texts = sc.get('lines', []) if is_end else [sc.get('text', '')]

@@ -88,10 +88,10 @@
     }
     pace(v) {
       this.paceMin = v;
-      const n = Math.round(v), ja = (v >= 1 && v <= 5 && Math.abs(v - n) < 0.01) ? U.kanji(n) + '分' : v + '分';
-      el('btnPace').textContent = '一時間 ' + ja;
+      const n = Math.round(v), ja = v + '分';
+      el('btnPace').textContent = '1時間 ' + ja;
       for (const b of document.querySelectorAll('[data-pace]')) b.setAttribute('aria-pressed', parseInt(b.dataset.pace, 10) === n ? 'true' : 'false');
-      el('paceNote').textContent = '朝から最期までは、ふつう十二時間ほどです。この速さなら、' + U.kanji(Math.max(1, Math.round(12 * v))) + '分前後の体験になります。目を閉じているあいだは、時計が速く進みます。';
+      el('paceNote').textContent = '朝から最期までは、ふつう12時間ほどです。この速さなら、' + Math.max(1, Math.round(12 * v)) + '分前後の体験になります。目を閉じているあいだは、時計が速く進みます。';
     }
 
     /* 見かたの選択。自分で過ごすときだけ、速さの設定を出す */
@@ -241,7 +241,7 @@
       tx.textContent = ''; box.hidden = false;
       const ps = [];
       for (const l of lines) {
-        const p = document.createElement('p'); p.textContent = l.text;
+        const p = document.createElement('p'); p.innerHTML = U.tcy(l.text);     // 縦書きなので、数字は縦中横に
         if (l.sub) p.classList.add('is-sub'); if (l.gap) p.classList.add('is-gap');
         tx.appendChild(p); ps.push(p);
       }
@@ -327,7 +327,7 @@
     async showEpitaph(d) {
       el('epiName').textContent = d.name + '　' + d.ageJa;
       el('epiJob').textContent = d.jobJa;
-      el('epiWhen').textContent = '最後の記憶　' + d.dateJa + '　' + d.timeJa;
+      el('epiWhen').innerHTML = U.tcy('最後の記憶　' + d.dateJa + '　' + d.timeJa);
       el('epiPlace').textContent = d.place + 'にて';
       el('epiCause').textContent = d.cause;
       el('epiNote').textContent = d.note;

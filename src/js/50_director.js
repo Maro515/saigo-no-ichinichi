@@ -411,6 +411,7 @@
       this.audio.update(dt);
       for (const f of this.ticks) f(t, dt);
       if (this.day) this.day.update(dt);
+      if (this.drama && this.drama.update) this.drama.update(dt);      // ドラマの歩き・腰をおろす動き
       env.walker = rig.pos;                       // 場所の側が、本人の位置を見られるように（通りの車は、人の手前で止まる）
       if (this.state === 'title') { this.titleT += dt; rig.drift = Math.sin(this.titleT * 0.08) * 0.2; } else rig.drift = 0;
       const a = this.active;

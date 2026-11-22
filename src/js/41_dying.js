@@ -54,6 +54,9 @@
     mark(name) { if (!this.app.q.get('dbg')) return; const h = document.getElementById('hint'); h.hidden = false; h.classList.add('is-on'); const b = this.body; h.textContent = this.mode + ' / ' + name + ' / ' + ((performance.now() - this.t0) / 1000).toFixed(1) + ' / body ' + (b ? b.userData.kind : 'none') + (this.rig.keepBody ? ' keep' : '') + (this.rig.bodyHolder.visible ? ' vis' : ' hid') + ' / ' + this.rig.fallMode; }
     wait(ms) { return U.sleep(ms * this.pace, this.tk); }
     say(line, o) { return this.ui.narrate(line, this.tk, Object.assign({ slow: true, gap: 760 }, o || {})); }
+    /* ドラマで見るとき: 異変の前の行では、まだ視点が動く（振り向く、右を見る…）。異変が来たら止める */
+    cue(i) { const d = this.app.drama; if (d && d.endCue) d.endCue(this.lines[i], i, this); }
+    hitNow() { const d = this.app.drama; if (d && d.endHit) d.endHit(); }
     get body() { return this.rig.bodyHolder.children[0] || null; }
     gesture(name, o) { const b = this.body; if (!this.still && b && b.userData.gesture && this.rig.bodyHolder.visible) b.userData.gesture(name, o); }
 
@@ -302,17 +305,22 @@
       const blow = Math.min(n - 1, hit + ((this.has('shake') && hit + 1 < n - 1) ? 1 : 0));
       for (let i = 0; i < blow; i++) {
         if (i === hit) { fx.onset(['shake']); fx.level(['shake'], 0.4); }       // 先に、揺れが来る
+        this.cue(i);
         await this.say(lines[i], i === hit ? { force: true, min: 400 } : null);
       }
       ui.clearNarr();
       /* いつものように、灯がともる。見つめているうちに、それは来る */
-      if (!this.has('shake')) await this.app.decoyLight((blow === 0 ? 2400 : 900) * this.pace, (4800 + this.r() * 3600) * this.pace, this.tk);
+      if (this.app.drama) await this.wait(((blow === 0 ? 1800 : 700) + this.r() * 700) * this.pace);      // ドラマでは、灯を見つめるのを待たない（見つめる人がいない）
+      else if (!this.has('shake')) await this.app.decoyLight((blow === 0 ? 2400 : 900) * this.pace, (4800 + this.r() * 3600) * this.pace, this.tk);
       else await this.wait(700);
       this.mark('snap');
       /* その一瞬。何が起きたかは、読みきれない */
       const st = this.end.stage, trf = /^trf/.test(this.cause.id);
       if (st === 'car') a.screech(0.7, 0.8);
       else if (st === 'street' && trf) { a.screech(0.6, 0.6); if (this.r() < 0.5) a.horn(0.5, 0.8); }
+      const dr = this.app.drama;
+      if (dr && dr.endBlow) { try { await dr.endBlow(this); } catch (e) { if (this.tk.aborted) throw e; } }      // 迫ってくるもの（ドラマで見るとき）
+      this.hitNow();
       ui.narrShow(lines[blow], true);
       await this.wait(U.clamp(ui.readMs(lines[blow]) * 0.34, 600, 1250));
       this.mark('blow');
@@ -363,11 +371,13 @@
       const { ui, fx, audio: a, env: e, rig, lines, tags } = this, n = lines.length, hit = this.end.hit, red = rig.reduced;
       const chest = this.has('chest'), head = this.has('head');
       for (let i = 0; i < hit; i++) {
+        this.cue(i);
         if (i < hit - 1) await this.say(lines[i]);
         else { ui.narrShow(lines[i]); await this.wait(ui.readMs(lines[i]) * 0.72 + 500 + this.r() * 1500); }   // この行を読んでいる途中で、それは来る
       }
       if (hit === 0) await this.wait(1700 + this.r() * 1500);
       this.mark('strike');
+      this.hitNow();
       this.app.seize();
       /* 発作 */
       ui.narrCut();
@@ -418,7 +428,9 @@
       const water = this.has('water'), choke = this.choke, quiet = this.quiet;
       for (let i = 0; i < n; i++) {
         const k = i - hit, x = k < 0 ? 0 : (k + 1) / (n - hit);
+        if (k < 0) this.cue(i);
         if (k === 0) {
+          this.hitNow();
           this.app.seize();
           fx.onset(tags);
           if (choke) {                                              // のどがふさがる。息の音は、出ない
@@ -462,6 +474,7 @@
       for (let i = 0; i < n; i++) {
         const x = i < hit ? 0 : 0.25 + 0.6 * (i - hit + 1) / (n - hit), u = n > 1 ? i / (n - 1) : 1;
         if (i > 0) { if (this.times) await this.skip(i); else if (i > hit) await this.dip(260 + 180 * i, x > 0.6); }
+        if (i < hit) this.cue(i); else if (i === hit) this.hitNow();
         if (!this.slow && i === hit) fx.onset(tags.filter(t => t !== 'fall'));
         if (!this.slow && this.has('fall') && i === Math.min(n - 1, hit + 1)) await this.drop();
         this.level(x); this.mark('line ' + i);

@@ -139,7 +139,7 @@
     if (app.token) app.token.cancel();
     U.el('title').hidden = true; app.state = 'play';
     const fail = [], modes = {}, logs = []; let ok = 0, floats = 0;
-    const drama = q.get('selftest') === 'drama', dstat = { scene: 0, talk: 0, amb: 0, mem: 0, lapse: 0, cut: 0 };
+    const drama = q.get('selftest') === 'drama', dstat = { scene: 0, talk: 0, amb: 0, mem: 0, lapse: 0, cut: 0, walkIn: 0, sit: 0, rise: 0, walk: 0, act: 0, blow: 0, out: 0, come: 0, hold: 0, put: 0, crouch: 0 };
     const whole = q.get('selftest') === 'day', stat = { talk: 0, mem: 0, rise: 0, sit: 0, guest: 0, skip: 0, enter: 0, beat: 0, walk: 0, bed: 0, note: 0, kin: 0, care: 0, aside: 0, amb: 0, away: 0, phone: 0, fill: 0, world: 0, hours: 0, bedHours: 0, bedEv: 0 };
     const realFloat = app.ui.float.bind(app.ui); app.ui.float = (...a) => { floats++; realFloat(a[0], a[1], a[2], a[3], 30); };
     const t0 = performance.now();
@@ -166,12 +166,12 @@
           const mems = L.pickMemories(app.life, app.data.memories, app.r, []);
           const dr = app.drama = new SI.Drama(app, c, app.life, mems, d, tk);
           await dr.run();
-          for (const k in dstat) dstat[k] += dr.stat[k];
         } else await app.enterScene(d.scene(), tk, false, c.place);
         app.update(0.05); app.rig.update(0.05); app.env.update(0.05, app.rig.root.position);
         await d.run('ためしの一言。');
         app.update(0.05); app.rig.update(0.05); app.env.update(0.05, app.rig.root.position);
         if (app.day && app.day.evlog) logs.push(c.id, ...app.day.evlog);
+        if (app.drama) for (const k in dstat) dstat[k] += app.drama.stat[k] || 0;      // 最期の場面のぶん（迫るもの）も数える
         if (app.drama) { app.drama.stop(); app.drama = null; app.ui.cinema(false); }
         if (app.day) { app.day.stop(); app.day = null; }
         if (app.rig.free) throw new Error('最期のあとも、歩ける状態のまま');

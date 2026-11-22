@@ -61,7 +61,12 @@ window.SI = window.SI || {};
     const m = U.timeToMin(t), h = Math.floor(m / 60), mm = m % 60;
     const ap = h < 12 ? '午前' : '午後';
     const h12 = h % 12;
-    return ap + U.kanji(h12) + '時' + (mm ? U.kanji(mm) + '分' : '');
+    return ap + h12 + '時' + (mm ? mm + '分' : '');                  // 時刻は算用数字で（2026-11-22 ユーザーの指示）
+  };
+  /* 縦書きの中の数字を、縦中横にする（2 けたまでを 1 文字ぶんに立てる）。HTML として返す */
+  U.tcy = function (text) {
+    const esc = String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    return esc.replace(/\d+/g, (d) => d.length <= 2 ? '<span class="tcy">' + d + '</span>' : d);
   };
   U.minToTime = (m) => {
     m = ((Math.round(m) % 1440) + 1440) % 1440;

@@ -148,22 +148,47 @@
     const base = { sx: spine.rotation.x, hx: head.rotation.x, ar: aR.el.rotation.x };
     const restQ = [aL, aR].map(a => [a.sh, a.el, a.hand].map(j => j.bone.quaternion.clone()));     // 手をのばしたあと、腕をもとの形に戻すため
     /* そばの人の反応。lean 身を乗り出す / hy・hp 顔を向ける / att こちらを見つめる / sob 肩がふるえる / reach 手をのばす */
-    const R = { lean: 0, leanT: 0, hy: 0, hyT: 0, hp: 0, hpT: 0, att: 0, attT: 0, sob: 0, sobT: 0, reach: null, move: null };
+    const R = { lean: 0, leanT: 0, hy: 0, hyT: 0, hp: 0, hpT: 0, att: 0, attT: 0, sob: 0, sobT: 0, reach: null, move: null, walk: false, speed: 0.9, face: null };
+    const W = { amt: 0, ph: 0 };                                    // 歩く足の運び
     root.userData.react = (r) => {
       for (const k of ['lean', 'hy', 'hp', 'att', 'sob']) if (r[k] != null) R[k + 'T'] = r[k];
       if ('reach' in r) {
         if (!r.reach && R.reach) [aL, aR].forEach((a, i) => { [a.sh, a.el, a.hand].forEach((j, k) => j.bone.quaternion.copy(restQ[i][k])); curl(a, 0.32); });
         R.reach = r.reach;
       }
-      if (r.move) R.move = r.move.clone();                          // そばへ寄る（床の上の位置）
+      if (r.move) { R.move = r.move.clone(); R.walk = !!r.walk; if (r.speed) R.speed = r.speed; }   // そばへ寄る（床の上の位置）。walk なら、向きを変えて歩いて行く
+      if ('face' in r) R.face = r.face;                              // 着いたら向く向き（root の rotation.y）
     };
+    root.userData.walking = () => !!(R.move && R.walk);
     root.userData.pose = pose;
     const down = new T.Vector3(), rdir = new T.Vector3(), sp = new T.Vector3();
     root.userData.tick = (t, dt) => {
       dt = dt == null ? 0.016 : Math.min(0.1, dt);
       for (const k of ['lean', 'hp', 'att', 'sob']) R[k] = U.damp(R[k], R[k + 'T'], 1.3, dt);
       R.hy = U.damp(R.hy, R.hyT, 2.4, dt);
-      if (R.move) { root.position.x = U.damp(root.position.x, R.move.x, 1.5, dt); root.position.z = U.damp(root.position.z, R.move.z, 1.5, dt); }
+      if (R.move && R.walk) {
+        /* 歩いて行く: 行く先へ体を向け、一定の速さで進む。足と腕を振る */
+        const dx = R.move.x - root.position.x, dz = R.move.z - root.position.z, d = Math.hypot(dx, dz);
+        if (d > 0.02) {
+          const st = Math.min(d, R.speed * dt);
+          root.position.x += dx / d * st; root.position.z += dz / d * st;
+          let a = Math.atan2(dx, dz) - root.rotation.y; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
+          root.rotation.y += a * Math.min(1, dt * 7);
+          W.amt = U.damp(W.amt, 1, 6, dt); W.ph += st / (0.34 * root.scale.x);
+        } else R.move = null;
+      } else if (R.move) { root.position.x = U.damp(root.position.x, R.move.x, 1.5, dt); root.position.z = U.damp(root.position.z, R.move.z, 1.5, dt); }
+      if (!(R.move && R.walk)) {
+        if (W.amt > 0.001) W.amt = U.damp(W.amt, 0, 7, dt); else W.amt = 0;
+        if (R.face != null) { let a = R.face - root.rotation.y; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; root.rotation.y += a * Math.min(1, dt * 4); if (Math.abs(a) < 0.01) R.face = null; }
+      }
+      if (pose === 'stand' && (W.amt > 0 || W.on)) {
+        W.on = W.amt > 0;
+        const sw = Math.sin(W.ph) * W.amt, k1 = Math.max(0, Math.sin(W.ph + 1.3)), k2 = Math.max(0, Math.sin(W.ph + 1.3 + Math.PI));
+        lL.hp.rotation.x = -0.42 * sw; lR.hp.rotation.x = 0.42 * sw;
+        lL.kn.rotation.x = 0.6 * k1 * W.amt; lR.kn.rotation.x = 0.6 * k2 * W.amt;
+        if (!R.reach) { aL.sh.rotation.x = 0.3 * sw; aR.sh.rotation.x = -0.3 * sw; }
+        hips.position.y = hipRest.y - 0.012 * W.amt * Math.abs(Math.cos(W.ph));
+      }
       const idle = 1 - R.att;
       spine.rotation.x = base.sx + R.lean + Math.sin(t * 0.9 + ph) * 0.012 + Math.sin(t * 8.5 + ph) * 0.012 * R.sob;
       head.rotation.set(base.hx + R.hp + Math.sin(t * 0.31 + ph * 2) * 0.03 * idle, Math.sin(t * 0.23 + ph) * 0.1 * idle + (root.userData.lookY || 0) + R.hy, 0);
@@ -175,7 +200,7 @@
           sp.setFromMatrixPosition(bones['upperarm' + side].matrixWorld);
           rdir.copy(tg).sub(sp); rdir.y *= 0.3; rdir.normalize();
           down.set(side === 'L' ? 0.3 : -0.3, -1, 0).applyQuaternion(root.quaternion);
-          armIK(root, root.userData.parts, side, tg, down, { dir: rdir, palm: new T.Vector3(0, -1, 0) });
+          armIK(root, root.userData.parts, side, tg, down, { dir: rdir, palm: R.reach.palm || new T.Vector3(0, -1, 0) });     // palm: 手のひらの向き（物を載せて運ぶときは上）
           curl(side === 'L' ? aR : aL, 0.5);
         }
       }
@@ -428,6 +453,10 @@
       reach: (sx) => (lying
         ? spec(at(P0.eye, sx * 0.1, -0.3, 0.36), dv(sx * 0.7, -0.2, -1), dv(0, -0.5, 1), dv(0, -1, 0.2), 0.08)
         : spec(at(P0.eye, sx * 0.12, -0.1, 0.5), dv(sx * 0.7, -1, 0), dv(0, 0.15, 1), dv(0, -1, 0), 0.08)),
+      /* 物を持って、胸の前へ上げる（手のひらを内へ向けて握る） */
+      hold: (sx) => spec(at(P0.eye, sx * 0.13, -0.27, 0.36), dv(sx * 0.8, -1, -0.15), dv(-sx * 0.2, 0.35, 1), dv(-sx, 0.2, 0), 0.95),
+      /* 両手で包むように持つ（手のひらを向かい合わせる） */
+      hold2: (sx) => spec(at(P0.eye, sx * 0.062, -0.28, 0.35), dv(sx * 0.9, -1, -0.1), dv(-sx * 0.35, 0.45, 1), dv(-sx, 0.1, 0), 0.9),
       /* 力が抜けて、落ちる */
       limp: (sx) => {
         if (lying) { const t = at(P0.hips, sx * 0.3, 0.05, 0); t.y = y0 + 0.048; return spec(t, dv(sx, 0.15, 0.4), dv(sx * 0.15, -1, 0), dv(0, 0, -1), 0.5); }
@@ -460,6 +489,13 @@
       }
     };
     g.userData.breath = (v) => { breathV = v; };
+    /* 手に物を持たせる（mesh は手の内側に、いつも立てて置く）。mesh が null なら放す */
+    let held = null;
+    const hw = V3(), hf = V3(), hn = V3(), hq = new T.Quaternion(), gqi = new T.Quaternion();
+    g.userData.hold = (sd, mesh) => {
+      if (held && held.mesh !== mesh) { g.remove(held.mesh); K.dispose(held.mesh); held = null; }
+      if (mesh) { held = { sd, mesh }; g.add(mesh); mesh.traverse(m => { if (m.isMesh) m.castShadow = false; }); }
+    };
     /* 手首のいまの位置（世界の座標）。そばの人が手を重ねるのに使う */
     g.userData.wrist = (sd) => { fig.updateMatrixWorld(true); return wpos(B['hand' + sd]); };
     g.userData.kind = kind;
@@ -479,6 +515,19 @@
         if (shake[sd]) { const a = shake[sd] * 0.004; tmp.t.x += Math.sin(t * 43 + (sd === 'L' ? 0 : 2)) * a; tmp.t.y += Math.sin(t * 37 + 1) * a; }
         if (lying && gl === goal[sd] && breathV) tmp.t.y += breathV * 0.006;
         solve(sd, tmp);
+      }
+      if (held) {
+        fig.updateMatrixWorld(true);
+        const hb = B['hand' + held.sd];
+        hw.setFromMatrixPosition(hb.matrixWorld); hb.getWorldQuaternion(hq);
+        hf.set(0, 1, 0).applyQuaternion(hq); hn.set(held.sd === 'L' ? -1 : 1, 0, 0).applyQuaternion(hq);
+        hn.y = 0; if (hn.lengthSq() > 1e-4) hn.normalize();                // 手のひらの側へ、横にずらす（上下にはずらさない。手が物の胴をつかむ）
+        const gr = held.mesh.userData.grip || { f: 0.05, n: 0.05, y: 0.04 };       // 物ごとの持ち方（指先・手のひら・高さのずらし）
+        hw.addScaledVector(hf, gr.f).addScaledVector(hn, gr.n); hw.y += gr.y;
+        g.updateWorldMatrix(true, false); g.worldToLocal(hw);
+        held.mesh.position.copy(hw);
+        if (held.mesh.userData.flat) held.mesh.rotation.set(-0.62, 0, 0);          // 平たい物（電話、紙、本）は、目のほうへ向ける
+        else { g.getWorldQuaternion(gqi); held.mesh.quaternion.copy(gqi.invert()); }     // ほかは、いつも立てて
       }
     };
     return g;

@@ -205,7 +205,7 @@
   /* そばにいる人の見た目 */
   L.companionLook = function (life, r) {
     const c = life.close;
-    const tops = ['#8c6f5e', '#6f7f8c', '#9a8f7a', '#7a6a7a', '#5f7a6a', '#a08a8a', '#70788f'];
+    const tops = ['#4f5d75', '#6f7f8c', '#5f7a6a', '#7a4f45', '#3f4a5c', '#7d7a52', '#5c4a3c'];     // 肌の色に近い服は、明るい部屋で裸に見えるので使わない
     const bottoms = ['#3d4352', '#4a4640', '#5a5a62', '#3f4a44'];
     const look = {
       top: U.pick(r, tops), bottom: U.pick(r, bottoms), hair: c.age >= 64 ? (c.age >= 76 ? '#c9c7c2' : '#9a9690') : (r() < 0.5 ? '#2e2a28' : '#3d332c'),

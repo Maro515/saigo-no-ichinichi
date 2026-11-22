@@ -63,7 +63,7 @@
     for (const ch of chairs) { const x = K.chair(K.m(P.wood)); K.at(x, ch[0], 0, ch[1], ch[2]); g.add(x); }
     const cup = K.cup(P.offwhite); K.at(cup, tx - 0.1, 0.7, tz - 0.2); g.add(cup);
     const cup2 = K.cup('#c9d6dc'); K.at(cup2, tx + 0.25, 0.7, tz + 0.18); g.add(cup2);
-    const bowl = K.bowl(P.black); K.at(bowl, tx - 0.32, 0.7, tz - 0.15); g.add(bowl);
+    const bowl = K.bowl(P.black); K.at(bowl, tx - 0.34, 0.7, tz - 0.21); g.add(bowl);      // 皿と重ならないように
     const plate = K.plate(P.white); K.at(plate, tx - 0.3, 0.7, tz + 0.02); g.add(plate);
     const news = K.paperSheet(0.3, 0.4); K.at(news, tx + 0.35, 0.7, tz - 0.15, 0.2); g.add(news);
     g.add(K.rod([tx - 0.45, 0.705, tz - 0.3], [tx - 0.22, 0.705, tz - 0.3], 0.004, K.m(P.woodDark), { noCast: true }));
